@@ -22,16 +22,12 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          # Pure project mein jahan bhi 'app' folder hai, wahan keystore daal do
-          APP_DIR=$(find . -type d -name "app" | head -n 1)
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$APP_DIR/hk_terminal_auto.jks"
+          # Keystore ko seedha app folder ke andar deploy karna
+          mkdir -p HKTerminal/app
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > HKTerminal/app/hk_terminal_auto.jks
 
       - name: Build Signed APK
-        run: |
-          # Jahan bhi settings.gradle hai, wahan jaakar build command chalao
-          PROJECT_ROOT=$(find . -name "settings.gradle" -printf '%h\n' | head -n 1)
-          cd "$PROJECT_ROOT"
-          gradle :app:assembleRelease --no-daemon
+        run: gradle :app:assembleRelease --no-daemon
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_ALIAS: hk_auto_alias
