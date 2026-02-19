@@ -26,10 +26,7 @@ jobs:
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > HKTerminal/app/hk_terminal_auto.jks
 
       - name: Build Signed APK
-        run: |
-          # Seedha us folder mein jao jahan settings.gradle aur build.gradle hain
-          cd HKTerminal/app
-          gradle assembleRelease --no-daemon
+        run: gradle :app:assembleRelease --no-daemon
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_ALIAS: hk_auto_alias
