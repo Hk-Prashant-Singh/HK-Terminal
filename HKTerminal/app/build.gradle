@@ -17,8 +17,10 @@ android {
 
     signingConfigs {
         release {
-            // 🎯 Path ekdum sahi hona chahiye taaki GitHub use dhoond sake
+            // 🎯 GitHub Actions ke decode step se match karne ke liye:
             storeFile file("hk_terminal_auto.jks") 
+            
+            // 🎯 Hamare release.yml ke 'env' variables se match karne ke liye:
             storePassword System.getenv("KEYSTORE_PASSWORD")
             keyAlias "hk_auto_alias"
             keyPassword System.getenv("KEYSTORE_PASSWORD")
@@ -34,8 +36,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
