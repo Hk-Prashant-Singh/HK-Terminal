@@ -26,8 +26,10 @@ jobs:
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > HKTerminal/app/hk_terminal_auto.jks
 
       - name: Build Signed APK
-        working-directory: ./HKTerminal
-        run: gradle assembleRelease
+        run: |
+          cd HKTerminal
+          chmod +x gradlew || true
+          gradle assembleRelease --no-daemon
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_ALIAS: hk_auto_alias
@@ -36,5 +38,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HK-Terminal-Signed-APK
-          path: HKTerminal/app/build/outputs/apk/release/app-release.apk
+          path: "HKTerminal/app/build/outputs/apk/release/*.apk"
           
