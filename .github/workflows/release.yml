@@ -22,14 +22,18 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          mkdir -p HKTerminal/app
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > HKTerminal/app/hk_terminal_auto.jks
+          # Keystore ko sahi folder mein force-feed karna
+          TARGET_DIR="HKTerminal/app"
+          mkdir -p $TARGET_DIR
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $TARGET_DIR/hk_terminal_auto.jks
 
       - name: Build Signed APK
         run: |
+          # Sabse pehle gradlew ko executable banana
+          chmod +x HKTerminal/gradlew || true
+          # Folder ke andar jaakar build command chalana
           cd HKTerminal
-          chmod +x gradlew || true
-          gradle assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_ALIAS: hk_auto_alias
@@ -38,5 +42,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HK-Terminal-Signed-APK
-          path: "HKTerminal/app/build/outputs/apk/release/*.apk"
+          path: "**/build/outputs/apk/release/*.apk"
           
