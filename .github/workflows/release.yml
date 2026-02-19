@@ -19,6 +19,7 @@ jobs:
 
       - name: Decode Keystore
         run: |
+          mkdir -p app
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/hk_terminal_auto.jks
 
       - name: Build Signed APK
