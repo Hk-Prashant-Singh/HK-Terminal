@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Directory Mapping
+DB_FILE="$HOME/hk-bot.txt"
+VOICE_TEMP="$HOME/v.wav"
+
+# Initializing Speaker
+termux-tts-speak "Alex system activated. Prashant bhai, main hamesha online hoon."
+
+# Persistent Loop
+while true; do
+    # Stage 1: Continuous Listening
+    termux-microphone-record -f "$VOICE_TEMP" -l 2 > /dev/null 2>&1
+    
+    # Stage 2: Trigger Check (Only if you speak)
+    # Check if 'next' or other command pattern is detected
+    MATCH=$(grep -iE "next|light-on|light-off|stop-bot" "$DB_FILE" | head -n 1)
+
+    if [ ! -z "$MATCH" ]; then
+        TRIGGER=$(echo "$MATCH" | cut -d'|' -f2)
+        EXEC_CMD=$(echo "$MATCH" | cut -d'|' -f3)
+
+        # AGAR STOP COMMAND DIYA TOH HI BAND HOGA
+        if [[ "$TRIGGER" == "stop-bot" ]]; then
+            termux-tts-speak "System shutting down. Alvida, Prashant bhai."
+            rm -f "$VOICE_TEMP"
+            exit 0
+        fi
+
+        # Baki commands execute karo
+        termux-tts-speak "Command recognized. Executing."
+        eval "$EXEC_CMD"
+    fi
+
+    # Stage 3: Auto-Refresh (Self-Healing)
+    rm -f "$VOICE_TEMP"
+    sleep 0.1
+done

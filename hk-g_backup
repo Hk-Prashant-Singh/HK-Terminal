@@ -1,0 +1,94 @@
+import os
+import shutil
+import getpass
+import subprocess
+import json
+import base64
+import sys
+
+def get_width():
+    return shutil.get_terminal_size((80, 20)).columns
+
+def print_header(text, color="\033[1;35m"):
+    width = get_width()
+    print(f"{color}" + "━" * width)
+    print(text.center(width))
+    print("━" * width + "\033[0m")
+
+def setup_requirements():
+    """Missing packages ko automatic install karne ke liye"""
+    print("\033[1;33m[*] Checking System Requirements...\033[0m")
+    
+    # Termux specific packages
+    packages = ["openjdk-17", "android-tools"]
+    for pkg in packages:
+        if shutil.which("apksigner") is None or shutil.which("keytool") is None:
+            print(f"[!] Installing {pkg}...")
+            os.system(f"pkg update && pkg install {pkg} -y")
+    
+    # Vaults creation logic
+    # Agar 'hk-g' file hai toh use rename karega taaki folder ban sake
+    for folder in ["hk-s", "hk-g"]:
+        if os.path.isfile(folder):
+            os.rename(folder, f"{folder}_backup")
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+def hk_engine():
+    setup_requirements()
+    os.system('clear')
+    print_header("HK TECH WIZARD - MASTER AUTO-TOOL")
+    
+    details = {"NAME": "HK Prashant Singh", "LOC": "Adra, West Bengal", "ALIAS": "hk_auto_alias"}
+
+    print(f"\033[1;34m[!] OPERATOR: {details['NAME']} | {details['LOC']}\033[0m")
+    print(f"\033[1;30m[!] STORAGE : /hk-s/ (Local) & /hk-g/ (GitHub Data)\033[0m\n")
+
+    print("  [1] 🔑 Local Signing (Sign APK + Fingerprint)")
+    print("  [2] ☁️  GitHub Auto-Build Setup (Base64 + YAML)")
+    print("  [3] 📂 Cleanup All Vaults")
+    print("  [4] ❌ Exit")
+
+    choice = input("\n[+] Prashant Bhai, select motor: ")
+
+    if choice == '1':
+        print_header("LOCAL SIGNING PROCESS")
+        ks_path = "hk-s/hk_terminal_auto.jks"
+        if not os.path.exists(ks_path):
+            print("[*] Generating New Keystore for Adra Identity...")
+            p1 = getpass.getpass("[+] Set Password: ")
+            dname = "CN=HK Prashant Singh, OU=Cybersecurity, O=HK Tech, L=Adra, ST=West Bengal, C=IN"
+            os.system(f'keytool -genkey -v -keystore {ks_path} -alias {details["ALIAS"]} -keyalg RSA -keysize 2048 -validity 10000 -dname "{dname}" -storepass {p1} -keypass {p1} -noprompt')
+        
+        # APK Signing Logic
+        target = next((f for f in os.listdir(".") if f.endswith(".apk") and "-HK-SIGNED" not in f), None)
+        if target:
+            pwd = getpass.getpass("[+] Password for Signing: ")
+            out_apk = f"hk-s/{target.replace('.apk', '-HK-SIGNED.apk')}"
+            os.system(f"apksigner sign --ks {ks_path} --out {out_apk} --ks-pass pass:{pwd} {target}")
+            print(f"\033[1;32m[✔] Signed: {out_apk}\033[0m")
+        else:
+            print("\033[1;31m[!] Error: APK file project folder mein nahi mili!\033[0m")
+
+    elif choice == '2':
+        print_header("GITHUB AUTOMATION SETUP")
+        ks_path = "hk-s/hk_terminal_auto.jks"
+        if not os.path.exists(ks_path):
+            print("\033[1;31m[!] Error: Pehle Option [1] se JKS generate kar lo!\033[0m")
+            return
+
+        with open(ks_path, "rb") as f:
+            encoded_ks = base64.b64encode(f.read()).decode("utf-8")
+        
+        # Save files in /hk-g/
+        with open("hk-g/github_secrets.txt", "w") as f:
+            f.write(f"KEY_ALIAS: {details['ALIAS']}\n\nKEYSTORE_BASE64:\n{encoded_ks}")
+        
+        print("\033[1;32m[✔] Success: GitHub data locked in /hk-g/ folder!\033[0m")
+        print("[i] 'github_secrets.txt' se Base64 copy kar lo.")
+
+    elif choice == '4':
+        sys.exit()
+
+if __name__ == "__main__":
+    hk_engine()

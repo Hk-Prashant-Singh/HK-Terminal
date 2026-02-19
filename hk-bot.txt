@@ -1,0 +1,1 @@
+HK01|tum-mujhe-sun-pa-rahe-ho|termux-tts-speak "Haan Boss, main aapko bilkul saaf sun raha hoon."
