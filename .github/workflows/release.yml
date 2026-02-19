@@ -1,4 +1,4 @@
-name: HK Terminal Auto Build
+name: HK Terminal Final Strike
 
 on:
   push:
@@ -22,15 +22,24 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          # Keystore ko seedha app folder ke andar deploy karna
+          # 🎯 Keystore ko seedha root mein aur app folder mein clone karo
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > hk_terminal_auto.jks
           mkdir -p HKTerminal/app
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > HKTerminal/app/hk_terminal_auto.jks
+          cp hk_terminal_auto.jks HKTerminal/app/hk_terminal_auto.jks
+          echo "Keystore deployed at: $(find . -name "hk_terminal_auto.jks")"
 
       - name: Build Signed APK
-        run: gradle :app:assembleRelease --no-daemon
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEYSTORE_ALIAS: hk_auto_alias
+        run: |
+          # 🛠️ Auto-Discovery mode on
+          PROJECT_ROOT=$(find . -name "settings.gradle" -printf '%h\n' | head -n 1)
+          cd "$PROJECT_ROOT"
+          
+          # 💉 Direct Injection: Path aur Password ko build engine mein ghusa do
+          gradle :app:assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file=$(find $GITHUB_WORKSPACE -name "hk_terminal_auto.jks" | head -n 1) \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=hk_auto_alias \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
