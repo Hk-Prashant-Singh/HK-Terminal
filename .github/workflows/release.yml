@@ -22,17 +22,13 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          # 🎯 Termux se jo Base64 nikaala hai use yahan deploy karo
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > hk_terminal_auto.jks
-          mkdir -p HKTerminal/app
-          cp hk_terminal_auto.jks HKTerminal/app/hk_terminal_auto.jks
 
       - name: Build Signed APK
         run: |
-          cd HKTerminal
-          # 💉 Direct Password Injection taaki build.gradle ka error bypass ho jaye
-          gradle :app:assembleRelease --no-daemon \
-            -Pandroid.injected.signing.store.file=$(pwd)/app/hk_terminal_auto.jks \
+          # Root se build chala rahe hain taaki settings.gradle detect ho
+          ./gradlew :HKTerminal:app:assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file=$(pwd)/hk_terminal_auto.jks \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=hk_auto_alias \
             -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
