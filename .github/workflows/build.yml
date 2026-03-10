@@ -18,11 +18,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         
       - name: Build Elite APK
+        working-directory: ./HK-Browser  # <-- Ye line engine ko sahi rasta dikhayegi
         run: gradle assembleDebug
         
       - name: Upload HK Payload
         uses: actions/upload-artifact@v4
         with:
           name: HK-Browser-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-          
+          path: HK-Browser/app/build/outputs/apk/debug/app-debug.apk # <-- Path updated
