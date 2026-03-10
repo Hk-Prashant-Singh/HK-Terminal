@@ -18,11 +18,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         
       - name: Build Elite APK
-        working-directory: ./HK-Browser  # <-- Ye line engine ko sahi rasta dikhayegi
+        working-directory: ./HK-Browser  # <-- Tera perfect engine target
         run: gradle assembleDebug
         
       - name: Upload HK Payload
         uses: actions/upload-artifact@v4
         with:
           name: HK-Browser-APK
-          path: HK-Browser/app/build/outputs/apk/debug/app-debug.apk # <-- Path updated
+          # <-- Wildcard Injection: Ye HK-Browser folder ke andar kahin bhi APK hoga, use nikal lega
+          path: HK-Browser/**/*.apk 
+          
