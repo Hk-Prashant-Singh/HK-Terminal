@@ -1,4 +1,0 @@
-rootProject.name = "HK-Terminal"
-
-// Isse Gradle ko module ka sahi raasta milega
-include ':HKTerminal:app'
