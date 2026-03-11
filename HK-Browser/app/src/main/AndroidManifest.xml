@@ -2,8 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.hk">
 
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <application 
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" /> <application 
         android:label="HK-Browser" 
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         
