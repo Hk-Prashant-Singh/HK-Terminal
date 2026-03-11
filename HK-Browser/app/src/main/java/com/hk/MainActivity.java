@@ -11,7 +11,6 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
     
     private WebView hkView;
-    // Tera secret target lock
     private final String TARGET_URL = "https://hk-love.netlify.app/";
 
     @Override
@@ -34,21 +33,32 @@ public class MainActivity extends Activity {
                 return true; 
             }
 
-            // HK-Operation: Updated Offline Shield (No Extra Comments, Pure Aggression)
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
-                    String offlineHtml = "<html><body style='background-color:#050505; text-align:center; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; margin:0; overflow:hidden;'>" +
-                            "" +
-                            "<div style='font-size:110px; filter:drop-shadow(0px 0px 20px #00ff00); margin-bottom:20px;'>🤖</div>" +
-                            "" +
-                            "<h1 style='font-family:\"Arial Black\", Impact, sans-serif; font-size:38px; color:#ff3333; text-shadow:0 0 20px #ff0000; margin:10px 0; line-height:1.1;'>NO INTERNET<br>CONNECTION</h1>" +
-                            "<div style='flex-grow:0.2;'></div>" +
-                            "" +
-                            "<div style='margin-top:40px; padding-top:20px; border-top:2px solid #222; width:85%;'>" +
-                            "<div style='color:#888; font-size:14px; letter-spacing:2px; margin-bottom:10px; font-family:monospace;'>&gt;-&gt; H-K Terminal Alpha &lt;-&lt;</div>" +
-                            "<h2 style='color:#e0e0e0; letter-spacing:1px; font-size:28px; text-transform:uppercase; margin:5px 0;'>HK PRASHANT SINGH</h2>" +
-                            "<h3 style='color:#00ff00; font-family:cursive; font-size:26px; text-shadow:0 0 10px #00ff00; margin:5px 0; font-style:italic;'>Tech Wizard</h3>" +
+                    // HK STYLE: Transparent Blur & Stylish Animations
+                    String offlineHtml = "<html><head><style>" +
+                            "body { background: #000; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; }" +
+                            ".container { width: 85%; padding: 30px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 25px; text-align: center; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8); animation: fadeIn 0.8s ease-out; }" +
+                            "@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }" +
+                            ".robot { font-size: 80px; margin-bottom: 10px; filter: drop-shadow(0 0 15px #00f2fe); animation: float 3s ease-in-out infinite; }" +
+                            "@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }" +
+                            "h1 { color: #fff; font-size: 24px; margin: 10px 0; text-transform: uppercase; letter-spacing: 2px; }" +
+                            "p { color: #bbb; font-size: 14px; margin-bottom: 25px; }" +
+                            ".reload-btn { background: linear-gradient(45deg, #00f2fe, #4facfe); border: none; padding: 12px 35px; color: white; border-radius: 50px; font-weight: bold; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4); transition: 0.3s; }" +
+                            ".tag-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }" +
+                            ".hk-tag { color: #00ff00; font-family: monospace; font-size: 18px; text-shadow: 0 0 10px #00ff00; margin: 0; }" +
+                            ".wizard { color: #fff; font-size: 12px; opacity: 0.6; letter-spacing: 3px; }" +
+                            "</style></head><body>" +
+                            "<div class='container'>" +
+                            "<div class='robot'>🤖</div>" +
+                            "<h1>No Internet</h1>" +
+                            "<p>Please check your connection</p>" +
+                            "<button class='reload-btn' onclick='window.location.reload()'>Reload</button>" +
+                            "<div class='tag-section'>" +
+                            "<p class='hk-tag'>HK PRASHANT BHAI</p>" +
+                            "<p class='wizard'>TECH WIZARD</p>" +
+                            "</div>" +
                             "</div>" +
                             "</body></html>";
                     
