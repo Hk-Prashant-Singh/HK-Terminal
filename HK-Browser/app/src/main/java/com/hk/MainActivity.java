@@ -1,13 +1,14 @@
 package com.hk;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 
@@ -22,13 +23,22 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         
         RelativeLayout layout = new RelativeLayout(this);
+        // Background black taaki flash na ho
+        layout.setBackgroundColor(0xFF000000);
         setContentView(layout);
 
-        // Initialize WebView
+        // Initialize WebView with High-Speed Settings
         hkView = new WebView(this);
-        layout.addView(hkView);
+        
+        // HK-Operation: Hardware Acceleration ON (GPU Render)
+        hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        
+        layout.addView(hkView, new RelativeLayout.LayoutParams(
+            RelativeLayout.LayoutParams.MATCH_PARENT, 
+            RelativeLayout.LayoutParams.MATCH_PARENT
+        ));
 
-        // Initialize loading spinner
+        // Initialize loading spinner (Neon Style Indicator)
         loadingIndicator = new ProgressBar(this);
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.WRAP_CONTENT, 
@@ -38,11 +48,18 @@ public class MainActivity extends Activity {
         loadingIndicator.setLayoutParams(params);
         layout.addView(loadingIndicator);
 
+        // Elite Engine WebSettings (For Heavy Websites)
         WebSettings settings = hkView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
+        settings.setDomStorageEnabled(true); // DOM Storage for heavy scripts
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
+        
+        // SPEED BOOSTERS INJECTED
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT); // Caching for instant reload
+        settings.setDatabaseEnabled(true); // Local Database support
+        settings.setLoadsImagesAutomatically(true); // Auto image loader
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW); // Security bypass for mixed content
 
         hkView.setWebViewClient(new WebViewClient() {
             @Override
@@ -52,15 +69,13 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
-                // Show loading spinner when page starts loading
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 loadingIndicator.setVisibility(View.VISIBLE);
                 super.onPageStarted(view, url, favicon);
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                // Hide loading spinner when page is finished loading
                 loadingIndicator.setVisibility(View.GONE);
                 super.onPageFinished(view, url);
             }
@@ -68,6 +83,8 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
+                    loadingIndicator.setVisibility(View.GONE); // Error aate hi loading band
+                    
                     // HK-STYLE: ALL-IN-ONE COMPACT OFFLINE MODULE
                     String offlineHtml = "<html><head><style>" +
                             "body { background: #000; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; }" +
@@ -87,7 +104,8 @@ public class MainActivity extends Activity {
                             "<div class='robot'>🤖</div>" +
                             "<h1>Offline</h1>" +
                             "<p>HK SECURITY PROTOCOL ACTIVE</p>" +
-                            "<button class='reload-btn' onclick='window.location.reload()'>System Reload</button>" +
+                            // Direct Target Hit karega ye button
+                            "<button class='reload-btn' onclick='window.location.href=\"" + TARGET_URL + "\"'>System Reload</button>" +
                             "<div class='tag-section'>" +
                             "<div class='hk-tag'>HK PRASHANT BHAI</div>" +
                             "<div class='wizard'>Tech Wizard</div>" +
@@ -100,7 +118,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        // Load the target URL
+        // Fire the Initial Payload
         hkView.loadUrl(TARGET_URL);
     }
 
@@ -113,3 +131,4 @@ public class MainActivity extends Activity {
         }
     }
 }
+
