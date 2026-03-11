@@ -11,7 +11,7 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
     
     private WebView hkView;
-    // Tera secret target lock kar diya gaya hai
+    // Tera secret target lock
     private final String TARGET_URL = "https://hk-love.netlify.app/";
 
     @Override
@@ -34,29 +34,29 @@ public class MainActivity extends Activity {
                 return true; 
             }
 
-            // HK-Operation: Offline Shield Injection (URL Hider)
+            // HK-Operation: Updated Offline Shield (No Extra Comments, Pure Aggression)
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                // Sirf main page ke error par ye shield activate hogi
                 if (request.isForMainFrame()) {
-                    // Custom Hacker-Style UI using embedded HTML/CSS
-                    String offlineHtml = "<html><body style='background-color:#050505; color:#00ff00; text-align:center; font-family:\"Courier New\", Courier, monospace; display:flex; flex-direction:column; justify-content:center; height:90vh; margin:0;'>" +
-                            "<div style='font-size:120px; margin-bottom:10px;'>🤖</div>" +
-                            "<h1 style='text-transform:uppercase; letter-spacing:2px; font-size:22px; color:#ff003c; text-shadow: 0 0 10px #ff003c;'>No Internet Connection</h1>" +
-                            "<p style='color:#444; font-size:12px; margin-top:5px; text-transform:uppercase;'>System Offline | URL Secured</p>" +
-                            "<div style='margin-top:60px; border-top:1px solid #222; padding-top:20px;'>" +
-                            "<h2 style='color:#00ff00; letter-spacing:3px; font-size:20px; text-shadow: 0 0 15px #00ff00; margin:0;'>HK PRASHANT SINGH</h2>" +
-                            "<p style='color:#005500; font-size:12px; margin-top:5px; font-weight:bold;'>TECH WIZARD</p>" +
+                    String offlineHtml = "<html><body style='background-color:#050505; text-align:center; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; margin:0; overflow:hidden;'>" +
+                            "" +
+                            "<div style='font-size:110px; filter:drop-shadow(0px 0px 20px #00ff00); margin-bottom:20px;'>🤖</div>" +
+                            "" +
+                            "<h1 style='font-family:\"Arial Black\", Impact, sans-serif; font-size:38px; color:#ff3333; text-shadow:0 0 20px #ff0000; margin:10px 0; line-height:1.1;'>NO INTERNET<br>CONNECTION</h1>" +
+                            "<div style='flex-grow:0.2;'></div>" +
+                            "" +
+                            "<div style='margin-top:40px; padding-top:20px; border-top:2px solid #222; width:85%;'>" +
+                            "<div style='color:#888; font-size:14px; letter-spacing:2px; margin-bottom:10px; font-family:monospace;'>&gt;-&gt; H-K Terminal Alpha &lt;-&lt;</div>" +
+                            "<h2 style='color:#e0e0e0; letter-spacing:1px; font-size:28px; text-transform:uppercase; margin:5px 0;'>HK PRASHANT SINGH</h2>" +
+                            "<h3 style='color:#00ff00; font-family:cursive; font-size:26px; text-shadow:0 0 10px #00ff00; margin:5px 0; font-style:italic;'>Tech Wizard</h3>" +
                             "</div>" +
                             "</body></html>";
                     
-                    // Default error page ko hatakar apna shield load kar do
                     view.loadDataWithBaseURL(null, offlineHtml, "text/html", "UTF-8", null);
                 }
             }
         });
 
-        // Direct Load Payload
         hkView.loadUrl(TARGET_URL);
     }
 
