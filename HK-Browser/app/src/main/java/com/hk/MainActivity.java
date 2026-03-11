@@ -19,12 +19,10 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends AppCompatActivity {
-    
+public class MainActivity extends AppCompatActivity { // Ensure AppCompatActivity is used for compatibility
     private WebView hkView;
     private LinearLayout loaderLayout;
     private TextView statusText;
@@ -33,18 +31,18 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        
+        super.onCreate(savedInstanceState); // Call super class onCreate
+
         // Stylish Background Setup (Pitch Black)
         RelativeLayout layout = new RelativeLayout(this);
-        layout.setBackgroundColor(Color.parseColor("#050505")); 
+        layout.setBackgroundColor(Color.parseColor("#050505"));
         setContentView(layout);
 
         // WebView Setup
         hkView = new WebView(this);
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         layout.addView(hkView, new RelativeLayout.LayoutParams(
-            RelativeLayout.LayoutParams.MATCH_PARENT, 
+            RelativeLayout.LayoutParams.MATCH_PARENT,
             RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
@@ -53,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
         RelativeLayout.LayoutParams loaderParams = new RelativeLayout.LayoutParams(
-            RelativeLayout.LayoutParams.WRAP_CONTENT, 
+            RelativeLayout.LayoutParams.WRAP_CONTENT,
             RelativeLayout.LayoutParams.WRAP_CONTENT
         );
         loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
@@ -74,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
         layout.addView(loaderLayout);
 
-        // Elite Web Settings
+        // WebSettings Configuration
         WebSettings settings = hkView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -87,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 view.loadUrl(url);
-                return true; 
+                return true;
             }
 
             @Override
@@ -119,14 +117,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 🚀 THE MAGIC: Auto-Detect Network Engine
+        // 🚀 Auto-Detect Network Engine
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
             cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(Network network) {
                     runOnUiThread(() -> {
-                        // Data ON hote hi ye trigger hoga
+                        // Data ON, reload the website
                         statusText.setText("NETWORK DETECTED! RELOADING...");
                         statusText.setTextColor(Color.parseColor("#00ff00")); // Hacker Green
                         hkView.loadUrl(TARGET_URL); // Auto Reload
