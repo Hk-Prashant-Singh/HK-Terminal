@@ -19,13 +19,17 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
     
     private WebView hkView;
     private LinearLayout loaderLayout;
     private TextView statusText;
     private final String TARGET_URL = "https://hk-love.netlify.app/";
+    private AlertDialog noInternetDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,6 +114,7 @@ public class MainActivity extends Activity {
                     // Offline Text Target Hit
                     statusText.setText("NO INTERNET CONNECTION\n\nWaiting for Network...");
                     statusText.setTextColor(Color.parseColor("#ff003c")); // Red Alert
+                    showNoInternetDialog();  // Show the no internet dialog
                 }
             }
         });
@@ -142,5 +147,20 @@ public class MainActivity extends Activity {
             super.onBackPressed();
         }
     }
-}
 
+    private void showNoInternetDialog() {
+        if (noInternetDialog == null) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage("No internet connection detected. Please check your connection.")
+                .setCancelable(false)
+                .setPositiveButton("Retry", (dialog, id) -> {
+                    hkView.loadUrl(TARGET_URL); // Retry loading the URL
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Close", (dialog, id) -> dialog.dismiss());
+
+            noInternetDialog = builder.create();
+        }
+        noInternetDialog.show();
+    }
+}
