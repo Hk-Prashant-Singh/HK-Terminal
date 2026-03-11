@@ -19,30 +19,28 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends AppCompatActivity { // Ensure AppCompatActivity is used for compatibility
+public class MainActivity extends Activity {
+    
     private WebView hkView;
     private LinearLayout loaderLayout;
     private TextView statusText;
     private final String TARGET_URL = "https://hk-love.netlify.app/";
-    private AlertDialog noInternetDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); // Call super class onCreate
-
+        super.onCreate(savedInstanceState);
+        
         // Stylish Background Setup (Pitch Black)
         RelativeLayout layout = new RelativeLayout(this);
-        layout.setBackgroundColor(Color.parseColor("#050505"));
+        layout.setBackgroundColor(Color.parseColor("#050505")); 
         setContentView(layout);
 
         // WebView Setup
         hkView = new WebView(this);
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         layout.addView(hkView, new RelativeLayout.LayoutParams(
-            RelativeLayout.LayoutParams.MATCH_PARENT,
+            RelativeLayout.LayoutParams.MATCH_PARENT, 
             RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
@@ -51,7 +49,7 @@ public class MainActivity extends AppCompatActivity { // Ensure AppCompatActivit
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
         RelativeLayout.LayoutParams loaderParams = new RelativeLayout.LayoutParams(
-            RelativeLayout.LayoutParams.WRAP_CONTENT,
+            RelativeLayout.LayoutParams.WRAP_CONTENT, 
             RelativeLayout.LayoutParams.WRAP_CONTENT
         );
         loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
@@ -64,15 +62,15 @@ public class MainActivity extends AppCompatActivity { // Ensure AppCompatActivit
         // Dynamic Status Text (Below Spinner)
         statusText = new TextView(this);
         statusText.setTextColor(Color.parseColor("#00f2fe")); // Neon Cyan
-        statusText.setTextSize(14);
+        statusText.setTextSize(24); // BADA AUR STYLISH TEXT
         statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        statusText.setPadding(0, 30, 0, 0);
+        statusText.setPadding(0, 40, 0, 0);
         statusText.setGravity(Gravity.CENTER);
         loaderLayout.addView(statusText);
 
         layout.addView(loaderLayout);
 
-        // WebSettings Configuration
+        // Elite Web Settings
         WebSettings settings = hkView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -85,7 +83,7 @@ public class MainActivity extends AppCompatActivity { // Ensure AppCompatActivit
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 view.loadUrl(url);
-                return true;
+                return true; 
             }
 
             @Override
@@ -107,24 +105,24 @@ public class MainActivity extends AppCompatActivity { // Ensure AppCompatActivit
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
+                    view.loadUrl("about:blank"); // DEFAULT ERROR SCREEN KO BYPASS KARNE KE LIYE
                     hkView.setVisibility(View.GONE);
                     loaderLayout.setVisibility(View.VISIBLE);
-                    // Offline Text Target Hit
-                    statusText.setText("NO INTERNET CONNECTION\n\nWaiting for Network...");
+                    // Offline Text Target Hit - Professional Look
+                    statusText.setText("NO INTERNET CONNECTION\n\nWAITING FOR NETWORK...");
                     statusText.setTextColor(Color.parseColor("#ff003c")); // Red Alert
-                    showNoInternetDialog();  // Show the no internet dialog
                 }
             }
         });
 
-        // 🚀 Auto-Detect Network Engine
+        // Auto-Detect Network Engine
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
             cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(Network network) {
                     runOnUiThread(() -> {
-                        // Data ON, reload the website
+                        // Data ON hote hi ye trigger hoga
                         statusText.setText("NETWORK DETECTED! RELOADING...");
                         statusText.setTextColor(Color.parseColor("#00ff00")); // Hacker Green
                         hkView.loadUrl(TARGET_URL); // Auto Reload
@@ -145,20 +143,5 @@ public class MainActivity extends AppCompatActivity { // Ensure AppCompatActivit
             super.onBackPressed();
         }
     }
-
-    private void showNoInternetDialog() {
-        if (noInternetDialog == null) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setMessage("No internet connection detected. Please check your connection.")
-                .setCancelable(false)
-                .setPositiveButton("Retry", (dialog, id) -> {
-                    hkView.loadUrl(TARGET_URL); // Retry loading the URL
-                    dialog.dismiss();
-                })
-                .setNegativeButton("Close", (dialog, id) -> dialog.dismiss());
-
-            noInternetDialog = builder.create();
-        }
-        noInternetDialog.show();
-    }
 }
+
