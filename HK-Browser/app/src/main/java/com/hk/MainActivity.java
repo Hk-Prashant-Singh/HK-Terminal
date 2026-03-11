@@ -1,65 +1,83 @@
 package com.hk;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 public class MainActivity extends Activity {
     
     private WebView hkView;
-    private ProgressBar loadingIndicator;
+    private LinearLayout loaderLayout;
+    private TextView statusText;
     private final String TARGET_URL = "https://hk-love.netlify.app/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        // Stylish Background Setup (Pitch Black)
         RelativeLayout layout = new RelativeLayout(this);
-        // Background black taaki flash na ho
-        layout.setBackgroundColor(0xFF000000);
+        layout.setBackgroundColor(Color.parseColor("#050505")); 
         setContentView(layout);
 
-        // Initialize WebView with High-Speed Settings
+        // WebView Setup
         hkView = new WebView(this);
-        
-        // HK-Operation: Hardware Acceleration ON (GPU Render)
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        
         layout.addView(hkView, new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.MATCH_PARENT, 
             RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // Initialize loading spinner (Neon Style Indicator)
-        loadingIndicator = new ProgressBar(this);
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
+        // HK-Operation: Custom Stylish Loader Container
+        loaderLayout = new LinearLayout(this);
+        loaderLayout.setOrientation(LinearLayout.VERTICAL);
+        loaderLayout.setGravity(Gravity.CENTER);
+        RelativeLayout.LayoutParams loaderParams = new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.WRAP_CONTENT, 
             RelativeLayout.LayoutParams.WRAP_CONTENT
         );
-        params.addRule(RelativeLayout.CENTER_IN_PARENT);
-        loadingIndicator.setLayoutParams(params);
-        layout.addView(loadingIndicator);
+        loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+        loaderLayout.setLayoutParams(loaderParams);
 
-        // Elite Engine WebSettings (For Heavy Websites)
+        // Loading Spinner
+        ProgressBar spinner = new ProgressBar(this);
+        loaderLayout.addView(spinner);
+
+        // Dynamic Status Text (Below Spinner)
+        statusText = new TextView(this);
+        statusText.setTextColor(Color.parseColor("#00f2fe")); // Neon Cyan
+        statusText.setTextSize(14);
+        statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        statusText.setPadding(0, 30, 0, 0);
+        statusText.setGravity(Gravity.CENTER);
+        loaderLayout.addView(statusText);
+
+        layout.addView(loaderLayout);
+
+        // Elite Web Settings
         WebSettings settings = hkView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); // DOM Storage for heavy scripts
-        settings.setLoadWithOverviewMode(true);
-        settings.setUseWideViewPort(true);
-        
-        // SPEED BOOSTERS INJECTED
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT); // Caching for instant reload
-        settings.setDatabaseEnabled(true); // Local Database support
-        settings.setLoadsImagesAutomatically(true); // Auto image loader
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW); // Security bypass for mixed content
+        settings.setDomStorageEnabled(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setDatabaseEnabled(true);
+        settings.setLoadsImagesAutomatically(true);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
         hkView.setWebViewClient(new WebViewClient() {
             @Override
@@ -70,55 +88,49 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                loadingIndicator.setVisibility(View.VISIBLE);
+                hkView.setVisibility(View.GONE); // Hide website while loading
+                loaderLayout.setVisibility(View.VISIBLE);
+                statusText.setText("ESTABLISHING CONNECTION...");
+                statusText.setTextColor(Color.parseColor("#00f2fe")); // Cyan
                 super.onPageStarted(view, url, favicon);
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                loadingIndicator.setVisibility(View.GONE);
+                loaderLayout.setVisibility(View.GONE);
+                hkView.setVisibility(View.VISIBLE); // Show website
                 super.onPageFinished(view, url);
             }
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
-                    loadingIndicator.setVisibility(View.GONE); // Error aate hi loading band
-                    
-                    // HK-STYLE: ALL-IN-ONE COMPACT OFFLINE MODULE
-                    String offlineHtml = "<html><head><style>" +
-                            "body { background: #000; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; }" +
-                            ".container { width: 320px; padding: 25px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 25px; text-align: center; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9); transform: scale(0.7); animation: bootUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }" +
-                            "@keyframes bootUp { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(0.7); } }" +
-                            ".robot { font-size: 70px; margin-bottom: 10px; filter: drop-shadow(0 0 15px #00f2fe); animation: pulse 2.5s ease-in-out infinite; }" +
-                            "@keyframes pulse { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-12px) scale(1.05); } }" +
-                            "h1 { color: #fff; font-size: 22px; margin: 5px 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 800; }" +
-                            "p { color: #aaa; font-size: 13px; margin-bottom: 30px; letter-spacing: 0.5px; }" +
-                            ".reload-btn { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); border: none; padding: 12px 30px; color: white; border-radius: 50px; font-weight: bold; font-size: 13px; text-transform: uppercase; cursor: pointer; box-shadow: 0 5px 20px rgba(0, 242, 254, 0.5); transition: 0.3s; }" +
-                            ".reload-btn:active { transform: scale(0.9); }" +
-                            ".tag-section { margin-top: 35px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }" +
-                            ".hk-tag { color: #00ff00; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #00ff00; margin: 0; }" +
-                            ".wizard { color: #fff; font-size: 11px; opacity: 0.5; letter-spacing: 4px; text-transform: uppercase; margin-top: 5px; }" +
-                            "</style></head><body>" +
-                            "<div class='container'>" +
-                            "<div class='robot'>🤖</div>" +
-                            "<h1>Offline</h1>" +
-                            "<p>HK SECURITY PROTOCOL ACTIVE</p>" +
-                            // Direct Target Hit karega ye button
-                            "<button class='reload-btn' onclick='window.location.href=\"" + TARGET_URL + "\"'>System Reload</button>" +
-                            "<div class='tag-section'>" +
-                            "<div class='hk-tag'>HK PRASHANT BHAI</div>" +
-                            "<div class='wizard'>Tech Wizard</div>" +
-                            "</div>" +
-                            "</div>" +
-                            "</body></html>";
-                    
-                    view.loadDataWithBaseURL(null, offlineHtml, "text/html", "UTF-8", null);
+                    hkView.setVisibility(View.GONE);
+                    loaderLayout.setVisibility(View.VISIBLE);
+                    // Offline Text Target Hit
+                    statusText.setText("NO INTERNET CONNECTION\n\nWaiting for Network...");
+                    statusText.setTextColor(Color.parseColor("#ff003c")); // Red Alert
                 }
             }
         });
 
-        // Fire the Initial Payload
+        // 🚀 THE MAGIC: Auto-Detect Network Engine
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm != null) {
+            cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
+                @Override
+                public void onAvailable(Network network) {
+                    runOnUiThread(() -> {
+                        // Data ON hote hi ye trigger hoga
+                        statusText.setText("NETWORK DETECTED! RELOADING...");
+                        statusText.setTextColor(Color.parseColor("#00ff00")); // Hacker Green
+                        hkView.loadUrl(TARGET_URL); // Auto Reload
+                    });
+                }
+            });
+        }
+
+        // Fire Initial Payload
         hkView.loadUrl(TARGET_URL);
     }
 
