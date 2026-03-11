@@ -7,18 +7,36 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 
 public class MainActivity extends Activity {
     
     private WebView hkView;
+    private ProgressBar loadingIndicator;
     private final String TARGET_URL = "https://hk-love.netlify.app/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        RelativeLayout layout = new RelativeLayout(this);
+        setContentView(layout);
+
+        // Initialize WebView
         hkView = new WebView(this);
-        setContentView(hkView);
+        layout.addView(hkView);
+
+        // Initialize loading spinner
+        loadingIndicator = new ProgressBar(this);
+        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
+            RelativeLayout.LayoutParams.WRAP_CONTENT, 
+            RelativeLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.addRule(RelativeLayout.CENTER_IN_PARENT);
+        loadingIndicator.setLayoutParams(params);
+        layout.addView(loadingIndicator);
 
         WebSettings settings = hkView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -31,6 +49,20 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 view.loadUrl(url);
                 return true; 
+            }
+
+            @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                // Show loading spinner when page starts loading
+                loadingIndicator.setVisibility(View.VISIBLE);
+                super.onPageStarted(view, url, favicon);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                // Hide loading spinner when page is finished loading
+                loadingIndicator.setVisibility(View.GONE);
+                super.onPageFinished(view, url);
             }
 
             @Override
@@ -68,6 +100,7 @@ public class MainActivity extends Activity {
             }
         });
 
+        // Load the target URL
         hkView.loadUrl(TARGET_URL);
     }
 
@@ -80,4 +113,3 @@ public class MainActivity extends Activity {
         }
     }
 }
-
