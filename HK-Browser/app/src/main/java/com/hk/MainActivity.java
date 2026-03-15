@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog; 
-    private final String TARGET_URL = "https://hk-love.netlify.app/";
+    private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
