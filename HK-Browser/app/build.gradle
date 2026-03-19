@@ -15,10 +15,7 @@ android {
     }
 }
 
-// ==========================================
-// HK-OPERATION: ARSENAL & DEPENDENCIES INJECTED
-// ==========================================
 dependencies {
-    // Swipe-to-Refresh Engine loaded
+    // HK-OPERATION: Pull-to-Refresh Arsenal
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 }
