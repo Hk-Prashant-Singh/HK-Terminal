@@ -14,14 +14,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           
-      - name: Setup Gradle
+      - name: Setup Gradle (Force Stable Engine)
         uses: gradle/actions/setup-gradle@v3
-        
-      - name: Build Elite APK (Bypassing Global Gradle Engine)
+        with:
+          gradle-version: '8.4' # HK-OPERATION: Forced Downgrade to bypass 9.4.0 crash
+          
+      - name: Build Elite APK
         working-directory: ./HK-Browser
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: gradle assembleDebug # Direct global hit, no gradlew needed
         
       - name: Upload HK Payload
         uses: actions/upload-artifact@v4
