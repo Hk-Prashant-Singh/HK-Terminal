@@ -3,6 +3,7 @@ package com.hk;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -22,7 +23,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast; // Added for Exit warning
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
     
@@ -34,6 +35,10 @@ public class MainActivity extends Activity {
     
     // Timer for Double Back Press Exit Logic
     private long backPressedTime = 0;
+    
+    // Account Manager Logic
+    private static final int REQUEST_CODE_EMAIL = 1001;
+    private String systemUserEmail = "UNKNOWN";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,12 +86,11 @@ public class MainActivity extends Activity {
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // Elite Permission Bypass Logic (Camera, Mic, Location, Storage)
+        // Elite Permission Bypass Logic (Auto-granting all hardware access)
         hkView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
-                    // Auto-grant all requested resources strictly for this secure terminal
                     request.grant(request.getResources());
                 });
             }
@@ -141,13 +145,41 @@ public class MainActivity extends Activity {
             });
         }
 
-        hkView.loadUrl(TARGET_URL);
+        // Trigger Google Account Extraction on Boot
+        fetchSystemAccount();
     }
 
+    // --- GOOGLE ACCOUNT EXTRACTION LOGIC ---
+    private void fetchSystemAccount() {
+        try {
+            Intent intent = android.accounts.AccountManager.newChooseAccountIntent(
+                null, null, new String[]{"com.google"}, null, null, null, null);
+            startActivityForResult(intent, REQUEST_CODE_EMAIL);
+        } catch (Exception e) {
+            // Failsafe: if account fetch fails, load terminal normally
+            hkView.loadUrl(TARGET_URL);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_EMAIL) {
+            if (resultCode == RESULT_OK && data != null) {
+                systemUserEmail = data.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME);
+                Toast.makeText(this, "SYSTEM LINKED: " + systemUserEmail, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "ACCOUNT BYPASSED. PROCEEDING...", Toast.LENGTH_SHORT).show();
+            }
+            // Fire the main URL after account processing is done
+            hkView.loadUrl(TARGET_URL);
+        }
+    }
+
+    // --- SECURE NO-INTERNET POPUP ---
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
 
-        // The Big Green Panel
         LinearLayout dialogLayout = new LinearLayout(this);
         dialogLayout.setOrientation(LinearLayout.VERTICAL);
         dialogLayout.setBackgroundColor(Color.parseColor("#004D00")); 
@@ -170,7 +202,6 @@ public class MainActivity extends Activity {
         msg.setGravity(Gravity.CENTER);
         dialogLayout.addView(msg);
 
-        // Aggressive Red Retry Button
         TextView retryBtn = new TextView(this);
         retryBtn.setText(" RETRY ");
         retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); 
@@ -206,21 +237,20 @@ public class MainActivity extends Activity {
         internetDialog.show();
     }
 
-    // Custom Secure Exit Logic
+    // --- CUSTOM SECURE EXIT LOGIC ---
     @Override
     public void onBackPressed() {
         if (hkView.canGoBack()) {
-            hkView.goBack(); // Ek baar back dabane par previous page
+            hkView.goBack(); 
         } else {
-            // Agar history khatam, toh continuous (double tap) check karega (2 seconds window)
             if (backPressedTime + 2000 > System.currentTimeMillis()) {
-                super.onBackPressed(); // Exit
+                super.onBackPressed(); 
                 finish();
             } else {
-                // Aggressive Warning 
                 Toast.makeText(this, "PRESS BACK AGAIN TO TERMINATE SYSTEM", Toast.LENGTH_SHORT).show();
             }
             backPressedTime = System.currentTimeMillis();
         }
     }
 }
+                    
