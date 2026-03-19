@@ -16,6 +16,10 @@ android {
 }
 
 dependencies {
+    // HK-OPERATION: CORE SYSTEM ARMOR (Prevents mutation crash)
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    
     // HK-OPERATION: Pull-to-Refresh Arsenal
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 }
