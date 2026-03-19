@@ -14,3 +14,11 @@ android {
         versionName "1.0"
     }
 }
+
+// ==========================================
+// HK-OPERATION: ARSENAL & DEPENDENCIES INJECTED
+// ==========================================
+dependencies {
+    // Swipe-to-Refresh Engine loaded
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+}
