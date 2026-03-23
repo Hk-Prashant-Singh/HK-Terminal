@@ -21,17 +21,16 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ImageView; 
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout; 
 
 public class MainActivity extends Activity {
     
     private WebView hkView;
-    private SwipeRefreshLayout swipeRefreshLayout; 
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog; 
@@ -48,10 +47,6 @@ public class MainActivity extends Activity {
         RelativeLayout layout = new RelativeLayout(this);
         layout.setBackgroundColor(Color.parseColor("#050505")); 
         setContentView(layout);
-
-        // --- 2. SWIPE DOWN TO REFRESH ENGINE ---
-        swipeRefreshLayout = new SwipeRefreshLayout(this);
-        swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#39FF14"), Color.parseColor("#FF0000")); 
         
         hkView = new WebView(this);
         
@@ -59,30 +54,13 @@ public class MainActivity extends Activity {
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY); // Smooth Scroll
         
-        // --- HK-OPERATION: Y-AXIS SCROLL LOCK (CHROME STYLE) ---
-        hkView.getViewTreeObserver().addOnScrollChangedListener(() -> {
-            // Agar page ekdam top par hai (Y=0), tabhi SwipeRefresh ON hoga
-            if (hkView.getScrollY() == 0) {
-                swipeRefreshLayout.setEnabled(true);
-            } else {
-                // Page ke beech mein refresh ko completely KILL kar do
-                swipeRefreshLayout.setEnabled(false);
-            }
-        });
-        
-        swipeRefreshLayout.addView(hkView, new SwipeRefreshLayout.LayoutParams(
-            SwipeRefreshLayout.LayoutParams.MATCH_PARENT, 
-            SwipeRefreshLayout.LayoutParams.MATCH_PARENT
-        ));
-
-        layout.addView(swipeRefreshLayout, new RelativeLayout.LayoutParams(
+        // HK-OPERATION: DIRECT INJECTION (No SwipeRefresh Wrapper)
+        layout.addView(hkView, new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.MATCH_PARENT, 
             RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
-        swipeRefreshLayout.setOnRefreshListener(() -> hkView.reload());
-
-        // --- 3. SECURE LOADER SYSTEM (First Boot) ---
+        // --- 2. SECURE LOADER SYSTEM WITH CUSTOM BRAND LOGO ---
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
@@ -92,6 +70,17 @@ public class MainActivity extends Activity {
         );
         loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         loaderLayout.setLayoutParams(loaderParams);
+
+        // 👉 INJECTING YOUR CUSTOM LOGO ON LOADING SCREEN
+        ImageView splashLogo = new ImageView(this);
+        int logoId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
+        if(logoId != 0) {
+            splashLogo.setImageResource(logoId);
+        }
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(350, 350); 
+        logoParams.setMargins(0, 0, 0, 40); 
+        splashLogo.setLayoutParams(logoParams);
+        loaderLayout.addView(splashLogo);
 
         ProgressBar spinner = new ProgressBar(this);
         loaderLayout.addView(spinner);
@@ -106,7 +95,7 @@ public class MainActivity extends Activity {
 
         layout.addView(loaderLayout);
 
-        // --- 4. HK-OPERATION: HYPER-SPEED REAL-TIME ENGINE & OAUTH BYPASS ---
+        // --- 3. HK-OPERATION: HYPER-SPEED REAL-TIME ENGINE & OAUTH BYPASS ---
         WebSettings settings = hkView.getSettings();
         
         settings.setJavaScriptEnabled(true);
@@ -115,7 +104,6 @@ public class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_DEFAULT); 
         settings.setUseWideViewPort(true); 
         settings.setLoadWithOverviewMode(true); 
-        
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -133,7 +121,7 @@ public class MainActivity extends Activity {
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(hkView, true);
         
-        // --- 5. HK STEALTH BRIDGE & PERMISSIONS ---
+        // --- 4. HK STEALTH BRIDGE & PERMISSIONS ---
         hkView.addJavascriptInterface(new HKStealthBridge(), "HK_TERMINAL");
         
         hkView.setWebChromeClient(new WebChromeClient() {
@@ -145,7 +133,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        // --- 6. WEBVIEW CLIENT LOGIC ---
+        // --- 5. WEBVIEW CLIENT LOGIC ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -155,12 +143,10 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                if (!swipeRefreshLayout.isRefreshing()) {
-                    hkView.setVisibility(View.GONE); 
-                    loaderLayout.setVisibility(View.VISIBLE);
-                    statusText.setText("ESTABLISHING CONNECTION...");
-                    statusText.setTextColor(Color.parseColor("#00f2fe"));
-                }
+                hkView.setVisibility(View.GONE); 
+                loaderLayout.setVisibility(View.VISIBLE);
+                statusText.setText("ESTABLISHING CONNECTION...");
+                statusText.setTextColor(Color.parseColor("#00f2fe"));
                 super.onPageStarted(view, url, favicon);
             }
 
@@ -168,10 +154,6 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
-                
-                if (swipeRefreshLayout.isRefreshing()) {
-                    swipeRefreshLayout.setRefreshing(false);
-                }
                 super.onPageFinished(view, url);
             }
 
@@ -179,15 +161,12 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
                     view.loadUrl("about:blank"); 
-                    if (swipeRefreshLayout.isRefreshing()) {
-                        swipeRefreshLayout.setRefreshing(false);
-                    }
                     showNoInternetPopUp(); 
                 }
             }
         });
 
-        // --- 7. AUTO-RECONNECT ENGINE ---
+        // --- 6. AUTO-RECONNECT ENGINE ---
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
             cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
