@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog; 
-    private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
+    private final String TARGET_URL = "https://hk-love.netlify.app/";
     
     private static final int REQUEST_CODE_EMAIL = 1001;
     private String systemUserEmail = "UNKNOWN";
@@ -58,6 +58,17 @@ public class MainActivity extends Activity {
         // HARDWARE ACCELERATION (Max GPU Usage for Speed)
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY); // Smooth Scroll
+        
+        // --- HK-OPERATION: Y-AXIS SCROLL LOCK (CHROME STYLE) ---
+        hkView.getViewTreeObserver().addOnScrollChangedListener(() -> {
+            // Agar page ekdam top par hai (Y=0), tabhi SwipeRefresh ON hoga
+            if (hkView.getScrollY() == 0) {
+                swipeRefreshLayout.setEnabled(true);
+            } else {
+                // Page ke beech mein refresh ko completely KILL kar do
+                swipeRefreshLayout.setEnabled(false);
+            }
+        });
         
         swipeRefreshLayout.addView(hkView, new SwipeRefreshLayout.LayoutParams(
             SwipeRefreshLayout.LayoutParams.MATCH_PARENT, 
@@ -98,18 +109,15 @@ public class MainActivity extends Activity {
         // --- 4. HK-OPERATION: HYPER-SPEED REAL-TIME ENGINE & OAUTH BYPASS ---
         WebSettings settings = hkView.getSettings();
         
-        // OVERCLOCKING WEBVIEW ENGINE
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); // Fast Real-time DB sync
+        settings.setDomStorageEnabled(true); 
         settings.setDatabaseEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT); 
         settings.setUseWideViewPort(true); 
         settings.setLoadWithOverviewMode(true); 
         
-        // Deprecated but highly effective for raw rendering speed
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
         
-        // KILL GOOGLE'S LATENCY CHECK (Aggressive Speed Boost)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false); 
         }
@@ -117,7 +125,6 @@ public class MainActivity extends Activity {
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // Spoof User-Agent for Google Security Bypass
         String chromeUserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36";
         settings.setUserAgentString(chromeUserAgent);
         
