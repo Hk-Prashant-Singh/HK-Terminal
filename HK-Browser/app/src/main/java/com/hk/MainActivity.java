@@ -52,9 +52,17 @@ public class MainActivity extends Activity {
         
         // HARDWARE ACCELERATION (Max GPU Usage for Speed)
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY); // Smooth Scroll
+        hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY); 
         
-        // HK-OPERATION: DIRECT INJECTION (No SwipeRefresh Wrapper)
+        // 👉 HK-OPERATION: DEVICE SCAN (AUTOFILL) & KEYBOARD FOCUS ENGINE 
+        hkView.setFocusable(true);
+        hkView.setFocusableInTouchMode(true);
+        hkView.requestFocus(View.FOCUS_DOWN);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            hkView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
+        }
+
+        // DIRECT INJECTION
         layout.addView(hkView, new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.MATCH_PARENT, 
             RelativeLayout.LayoutParams.MATCH_PARENT
@@ -71,7 +79,7 @@ public class MainActivity extends Activity {
         loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         loaderLayout.setLayoutParams(loaderParams);
 
-        // 👉 INJECTING YOUR CUSTOM LOGO ON LOADING SCREEN
+        // INJECTING FRONT LOGO
         ImageView splashLogo = new ImageView(this);
         int logoId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
         if(logoId != 0) {
@@ -105,6 +113,9 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true); 
         settings.setLoadWithOverviewMode(true); 
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
+        
+        // Form Data Save Engine
+        settings.setSaveFormData(true);
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false); 
@@ -154,6 +165,8 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
+                // HK-OPERATION: Force cookie sync for auto-login memory
+                android.webkit.CookieManager.getInstance().flush();
                 super.onPageFinished(view, url);
             }
 
