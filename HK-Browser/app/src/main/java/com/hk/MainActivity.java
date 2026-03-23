@@ -12,6 +12,8 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -39,39 +41,32 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-// 👉 HK-OPERATION: NATIVE GOOGLE AUTH IMPORTS
-import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
-import com.google.android.gms.auth.api.signin.GoogleSignInClient;
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.tasks.Task;
+// ⚠️ NO PLAY SERVICES AUTH IMPORTS HERE (GHOST PROTOCOL ACTIVATED)
 
 public class MainActivity extends Activity {
 
-    // --- SYSTEM VARIABLES ---
+    // --- HK-OPERATION: CORE SYSTEM VARIABLES ---
     private WebView hkView;
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog;
     private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
 
-    // --- HK-OPERATION: FILE UPLOAD VARIABLES ---
+    // --- HK-OPERATION: FILE UPLOAD MATRIX ---
     private ValueCallback<Uri> mUploadMessage;
     public ValueCallback<Uri[]> uploadMessage;
     public static final int REQUEST_SELECT_FILE = 100;
     private final static int FILECHOOSER_RESULTCODE = 1;
 
-    // --- HK-OPERATION: NATIVE AUTH VARIABLES ---
-    private GoogleSignInClient mGoogleSignInClient;
-    private static final int RC_SIGN_IN = 9001;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // --- 1. FULLSCREEN ALPHA UI SETUP (Pitch Black) ---
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
+        // --- 1. FULLSCREEN ALPHA UI SETUP (Pitch Black Fortress) ---
+        getWindow().setFlags(
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, 
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        );
         RelativeLayout layout = new RelativeLayout(this);
         layout.setBackgroundColor(Color.parseColor("#050505"));
         setContentView(layout);
@@ -80,9 +75,10 @@ public class MainActivity extends Activity {
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
         
-        // FOCUS ENGINE (For Autofill & Keyboard)
+        // FOCUS ENGINE (For Autofill & Keyboard Injection)
         hkView.setFocusable(true);
         hkView.setFocusableInTouchMode(true);
+        hkView.requestFocus(View.FOCUS_DOWN);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             hkView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
         }
@@ -92,7 +88,7 @@ public class MainActivity extends Activity {
                 RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // --- 2. ELITE SPLASH LOADER (Custom Logo + Pulse Animation) ---
+        // --- 2. ELITE SPLASH LOADER (Custom Logo + Neon Pulse Animation) ---
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
@@ -103,18 +99,25 @@ public class MainActivity extends Activity {
         loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         loaderLayout.setLayoutParams(loaderParams);
 
+        // Dynamic Logo Setup
         ImageView splashLogo = new ImageView(this);
         int logoId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
-        if (logoId != 0) splashLogo.setImageResource(logoId);
-        splashLogo.setLayoutParams(new LinearLayout.LayoutParams(400, 400));
+        if (logoId != 0) {
+            splashLogo.setImageResource(logoId);
+        }
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(400, 400);
+        logoParams.setMargins(0, 0, 0, 50);
+        splashLogo.setLayoutParams(logoParams);
         
-        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.7f);
-        pulse.setDuration(800);
+        // Pulse Animation for Tech Wizard Feel
+        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.6f);
+        pulse.setDuration(900);
         pulse.setRepeatMode(Animation.REVERSE);
         pulse.setRepeatCount(Animation.INFINITE);
         splashLogo.startAnimation(pulse);
         loaderLayout.addView(splashLogo);
 
+        // Neon Cyan Spinner
         ProgressBar spinner = new ProgressBar(this);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             spinner.setIndeterminateTintList(ColorStateList.valueOf(Color.parseColor("#00f2fe")));
@@ -127,39 +130,37 @@ public class MainActivity extends Activity {
         statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         statusText.setPadding(0, 40, 0, 0);
         statusText.setGravity(Gravity.CENTER);
-        statusText.setText("PLEASE WAIT");
+        statusText.setText("SYSTEM INITIALIZING...");
         loaderLayout.addView(statusText);
 
         layout.addView(loaderLayout);
 
-        // --- 3. 👉 NATIVE GOOGLE SIGN-IN INITIALIZATION ---
-        // ⚠️ ALPHA WARNING: Replace "YOUR_WEB_CLIENT_ID_HERE" with your actual Firebase Web Client ID!
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("YOUR_WEB_CLIENT_ID_HERE") 
-                .requestEmail()
-                .build();
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-
-        // --- 4. HYPER-SPEED REAL-TIME ENGINE ---
+        // --- 3. 👉 THE GHOST ENGINE (OAUTH BYPASS & PERFORMANCE MATRIX) ---
         WebSettings settings = hkView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); // Required for Firebase
+        settings.setDomStorageEnabled(true); // Critical for Firebase Tokens
         settings.setDatabaseEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
         settings.setSaveFormData(true);
         settings.setAllowFileAccess(true);
-        settings.setGeolocationEnabled(true);
+        settings.setAllowContentAccess(true);
+        settings.setGeolocationEnabled(true); // For Delivery Location
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(false); 
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
-        // SPOOFING: Hide URL bar & emulate Chrome
-        String chromeAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
-        settings.setUserAgentString(chromeAgent);
+        // 👉 HK-OPERATION: DEEP USER-AGENT SPOOFING (Chrome Pixel 8)
+        // This is the lethal line that completely bypasses Google's WebView Block
+        String ghostChromeAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
+        settings.setUserAgentString(ghostChromeAgent);
 
-        CookieManager.getInstance().setAcceptCookie(true);
-        CookieManager.getInstance().setAcceptThirdPartyCookies(hkView, true);
+        // Session Memory Lock
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        cookieManager.setAcceptThirdPartyCookies(hkView, true);
 
-        // --- 5. HK-OPERATION: DOWNLOAD MANAGER ---
+        // --- 4. HK-OPERATION: DOWNLOAD MANAGER ---
         hkView.setDownloadListener(new DownloadListener() {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
@@ -168,55 +169,79 @@ public class MainActivity extends Activity {
                 String cookies = CookieManager.getInstance().getCookie(url);
                 request.addRequestHeader("cookie", cookies);
                 request.addRequestHeader("User-Agent", userAgent);
-                request.setDescription("Downloading file...");
+                request.setDescription("Downloading encrypted file...");
                 request.setTitle(url.substring(url.lastIndexOf("/") + 1));
                 request.allowScanningByMediaScanner();
                 request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
                 request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, url.substring(url.lastIndexOf("/") + 1));
+                
                 DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                dm.enqueue(request);
-                Toast.makeText(getApplicationContext(), "Download Started...", Toast.LENGTH_SHORT).show();
+                if (dm != null) {
+                    dm.enqueue(request);
+                    Toast.makeText(getApplicationContext(), "Download Sequence Initiated...", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
-        // --- 6. PERMISSIONS & FILE UPLOADS ---
+        // --- 5. PERMISSIONS & FILE UPLOADS (WEB CHROME CLIENT) ---
         hkView.setWebChromeClient(new WebChromeClient() {
+            // Geolocation Bypass
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 callback.invoke(origin, true, false);
             }
 
+            // General Hardware Permissions
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
             }
 
+            // File Upload Engine (Modern Android)
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public boolean onShowFileChooser(WebView mWebView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                if (uploadMessage != null) { uploadMessage.onReceiveValue(null); uploadMessage = null; }
+                if (uploadMessage != null) { 
+                    uploadMessage.onReceiveValue(null); 
+                    uploadMessage = null; 
+                }
                 uploadMessage = filePathCallback;
                 Intent intent = fileChooserParams.createIntent();
-                try { startActivityForResult(intent, REQUEST_SELECT_FILE); } catch (Exception e) { return false; }
+                try { 
+                    startActivityForResult(intent, REQUEST_SELECT_FILE); 
+                } catch (Exception e) { 
+                    uploadMessage = null;
+                    Toast.makeText(getApplicationContext(), "File System Locked", Toast.LENGTH_SHORT).show();
+                    return false; 
+                }
                 return true;
+            }
+
+            // File Upload Engine (Legacy Android)
+            public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType, String capture) {
+                mUploadMessage = uploadMsg;
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                startActivityForResult(Intent.createChooser(intent, "Select File"), FILECHOOSER_RESULTCODE);
             }
         });
 
-        // --- 7. THE NATIVE INTERCEPTOR (WHITE SCREEN BYPASS) ---
+        // --- 6. THE WEBVIEW CLIENT (ROUTING MATRIX) ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // External Triggers (WhatsApp, Mail, Call)
-                if (url.startsWith("intent://") || url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("whatsapp://")) {
-                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); return true; } catch (Exception e) { return false; }
+                // External Triggers (WhatsApp, Phone, Email)
+                if (url.startsWith("intent://") || url.startsWith("whatsapp://") || url.startsWith("mailto:") || url.startsWith("tel:")) {
+                    try { 
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); 
+                        return true; 
+                    } catch (Exception e) { 
+                        return false; 
+                    }
                 }
-
-                // 👉 THE KILL SWITCH: Launch Native OS Account Picker instead of WebView
-                if (url.contains("accounts.google.com") || url.contains("gsi/")) {
-                    Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                    startActivityForResult(signInIntent, RC_SIGN_IN);
-                    return true; 
-                }
+                
+                // Allow EVERYTHING inside the WebView (Ghost Chrome handles the rest)
                 view.loadUrl(url);
                 return true;
             }
@@ -226,7 +251,7 @@ public class MainActivity extends Activity {
                 hkView.setVisibility(View.GONE);
                 loaderLayout.setVisibility(View.VISIBLE);
                 statusText.setText("SYNCING DATA...");
-                statusText.setTextColor(Color.parseColor("#39FF14")); 
+                statusText.setTextColor(Color.parseColor("#39FF14")); // Hacker Green
                 super.onPageStarted(view, url, favicon);
             }
 
@@ -234,106 +259,127 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
-                statusText.setTextColor(Color.parseColor("#00f2fe")); 
-                CookieManager.getInstance().flush();
+                statusText.setTextColor(Color.parseColor("#00f2fe")); // Cyan Reset
+                
+                // FLUSH MEMORY: Permanently locks the user session inside the app
+                CookieManager.getInstance().flush(); 
                 super.onPageFinished(view, url);
             }
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) {
-                    view.loadUrl("about:blank");
-                    showNoInternetPopUp();
+                if (request.isForMainFrame()) { 
+                    view.loadUrl("about:blank"); 
+                    showNoInternetPopUp(); 
                 }
             }
         });
 
-        // --- 8. AUTO-RECONNECT ENGINE ---
+        // --- 7. AUTO-RECONNECT ENGINE (NETWORK LISTENER) ---
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
-            cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
-                @Override
-                public void onAvailable(Network network) {
-                    runOnUiThread(() -> {
-                        if (internetDialog != null && internetDialog.isShowing()) {
-                            internetDialog.dismiss();
-                            hkView.loadUrl(TARGET_URL);
-                        }
-                    });
-                }
-            });
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(Network network) {
+                        runOnUiThread(() -> {
+                            if (internetDialog != null && internetDialog.isShowing()) {
+                                internetDialog.dismiss();
+                                statusText.setText("UPLINK RESTORED...");
+                                statusText.setTextColor(Color.parseColor("#00ff00"));
+                                hkView.loadUrl(TARGET_URL);
+                            }
+                        });
+                    }
+                });
+            }
         }
+        
+        // INITIAL FIRE
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- HK-OPERATION: ALL SYSTEM RESULTS HANDLER ---
+    // --- 8. UPLOAD RESULT HANDLER ---
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        super.onActivityResult(requestCode, resultCode, intent);
-
-        // 1. Handle Native Google Login Token
-        if (requestCode == RC_SIGN_IN) {
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(intent);
-            try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                String idToken = account.getIdToken();
-                String email = account.getEmail();
-
-                Toast.makeText(this, "Secure Uplink: " + email, Toast.LENGTH_SHORT).show();
-                // Pass token to your website's javascript
-                hkView.evaluateJavascript("javascript:receiveAndroidToken('" + idToken + "');", null);
-
-            } catch (ApiException e) {
-                // Agar SHA-1 ya Web Client ID galat hoga, toh ye error aayega!
-                Toast.makeText(this, "Auth Intercept Failed. Check SHA-1 & Client ID.", Toast.LENGTH_LONG).show();
-            }
-            return;
-        }
-
-        // 2. Handle File Uploads
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             if (requestCode == REQUEST_SELECT_FILE) {
                 if (uploadMessage == null) return;
                 uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, intent));
                 uploadMessage = null;
             }
+        } else if (requestCode == FILECHOOSER_RESULTCODE) {
+            if (null == mUploadMessage) return;
+            Uri result = intent == null || resultCode != RESULT_OK ? null : intent.getData();
+            mUploadMessage.onReceiveValue(result);
+            mUploadMessage = null;
+        } else {
+            Toast.makeText(this, "Upload Terminated", Toast.LENGTH_SHORT).show();
         }
     }
 
-    // --- SECURE NO-INTERNET POPUP ---
+    // --- 9. SECURE NO-INTERNET POPUP (HACKER UI) ---
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
+        
         LinearLayout dialogLayout = new LinearLayout(this);
         dialogLayout.setOrientation(LinearLayout.VERTICAL);
-        dialogLayout.setBackgroundColor(Color.parseColor("#004D00"));
+        dialogLayout.setBackgroundColor(Color.parseColor("#002200")); // Dark hacker green bg
         dialogLayout.setPadding(60, 80, 60, 80);
         dialogLayout.setGravity(Gravity.CENTER);
+        
         TextView title = new TextView(this);
-        title.setText("UPLINK DISCONNECTED");
+        title.setText("NETWORK BREACH");
         title.setTextColor(Color.WHITE);
+        title.setTextSize(20);
         title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         dialogLayout.addView(title);
+        
+        TextView msg = new TextView(this);
+        msg.setText("\nUplink lost. System waiting for secure connection...\n");
+        msg.setTextColor(Color.parseColor("#39FF14")); // Neon green text
+        msg.setTextSize(14);
+        msg.setTypeface(Typeface.MONOSPACE);
+        msg.setGravity(Gravity.CENTER);
+        dialogLayout.addView(msg);
+        
         TextView retryBtn = new TextView(this);
-        retryBtn.setText(" RETRY UPLINK ");
-        retryBtn.setBackgroundColor(Color.parseColor("#FF0000"));
+        retryBtn.setText(" FORCE RECONNECT ");
+        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); // Aggressive Red
         retryBtn.setTextColor(Color.WHITE);
-        retryBtn.setPadding(30, 30, 30, 30);
-        retryBtn.setOnClickListener(v -> {
-            hkView.loadUrl(TARGET_URL);
-            if (internetDialog != null) internetDialog.dismiss();
+        retryBtn.setPadding(40, 35, 40, 35);
+        retryBtn.setTextSize(16);
+        retryBtn.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        
+        retryBtn.setOnClickListener(v -> { 
+            hkView.loadUrl(TARGET_URL); 
+            if (internetDialog != null) internetDialog.dismiss(); 
         });
+        
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, 
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        btnParams.setMargins(0, 40, 0, 0);
+        retryBtn.setLayoutParams(btnParams);
         dialogLayout.addView(retryBtn);
+        
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setView(dialogLayout);
         builder.setCancelable(false);
         internetDialog = builder.create();
+        
+        if (internetDialog.getWindow() != null) {
+            internetDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
         internetDialog.show();
     }
 
+    // --- 10. CUSTOM SECURE EXIT & GESTURE LOGIC ---
     @Override
     public void onBackPressed() {
         if (hkView.canGoBack()) {
-            hkView.goBack();
+            hkView.goBack(); 
         } else {
             super.onBackPressed();
         }
