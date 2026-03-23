@@ -3,6 +3,7 @@ package com.hk;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -14,12 +15,16 @@ import android.net.Network;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
+import android.webkit.GeolocationPermissions;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -34,7 +39,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-// 👉 NATIVE AUTH IMPORTS
+// 👉 HK-OPERATION: NATIVE GOOGLE AUTH IMPORTS
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -44,19 +49,20 @@ import com.google.android.gms.tasks.Task;
 
 public class MainActivity extends Activity {
 
+    // --- SYSTEM VARIABLES ---
     private WebView hkView;
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog;
     private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
 
-    // HK-OPERATION: File Upload Variables
+    // --- HK-OPERATION: FILE UPLOAD VARIABLES ---
     private ValueCallback<Uri> mUploadMessage;
     public ValueCallback<Uri[]> uploadMessage;
     public static final int REQUEST_SELECT_FILE = 100;
     private final static int FILECHOOSER_RESULTCODE = 1;
 
-    // 👉 HK-OPERATION: NATIVE AUTH VARIABLES
+    // --- HK-OPERATION: NATIVE AUTH VARIABLES ---
     private GoogleSignInClient mGoogleSignInClient;
     private static final int RC_SIGN_IN = 9001;
 
@@ -64,7 +70,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // --- 1. FULLSCREEN ALPHA UI SETUP ---
+        // --- 1. FULLSCREEN ALPHA UI SETUP (Pitch Black) ---
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         RelativeLayout layout = new RelativeLayout(this);
         layout.setBackgroundColor(Color.parseColor("#050505"));
@@ -73,19 +79,27 @@ public class MainActivity extends Activity {
         hkView = new WebView(this);
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
+        
+        // FOCUS ENGINE (For Autofill & Keyboard)
         hkView.setFocusable(true);
         hkView.setFocusableInTouchMode(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            hkView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
+        }
 
         layout.addView(hkView, new RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.MATCH_PARENT,
                 RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // --- 2. ELITE SPLASH LOADER ---
+        // --- 2. ELITE SPLASH LOADER (Custom Logo + Pulse Animation) ---
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
-        RelativeLayout.LayoutParams loaderParams = new RelativeLayout.LayoutParams(-2, -2);
+        RelativeLayout.LayoutParams loaderParams = new RelativeLayout.LayoutParams(
+            RelativeLayout.LayoutParams.WRAP_CONTENT, 
+            RelativeLayout.LayoutParams.WRAP_CONTENT
+        );
         loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         loaderLayout.setLayoutParams(loaderParams);
 
@@ -93,6 +107,7 @@ public class MainActivity extends Activity {
         int logoId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
         if (logoId != 0) splashLogo.setImageResource(logoId);
         splashLogo.setLayoutParams(new LinearLayout.LayoutParams(400, 400));
+        
         AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.7f);
         pulse.setDuration(800);
         pulse.setRepeatMode(Animation.REVERSE);
@@ -114,10 +129,11 @@ public class MainActivity extends Activity {
         statusText.setGravity(Gravity.CENTER);
         statusText.setText("PLEASE WAIT");
         loaderLayout.addView(statusText);
+
         layout.addView(loaderLayout);
 
-        // --- 3. 👉 NATIVE GOOGLE SIGN-IN ENGINE INITIALIZATION ---
-        // ALERT: "YOUR_WEB_CLIENT_ID" ko apne Firebase project ke Web Client ID se replace karna
+        // --- 3. 👉 NATIVE GOOGLE SIGN-IN INITIALIZATION ---
+        // ⚠️ ALPHA WARNING: Replace "YOUR_WEB_CLIENT_ID_HERE" with your actual Firebase Web Client ID!
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken("YOUR_WEB_CLIENT_ID_HERE") 
                 .requestEmail()
@@ -127,17 +143,54 @@ public class MainActivity extends Activity {
         // --- 4. HYPER-SPEED REAL-TIME ENGINE ---
         WebSettings settings = hkView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
+        settings.setDomStorageEnabled(true); // Required for Firebase
         settings.setDatabaseEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setSaveFormData(true);
+        settings.setAllowFileAccess(true);
+        settings.setGeolocationEnabled(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+        // SPOOFING: Hide URL bar & emulate Chrome
         String chromeAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
         settings.setUserAgentString(chromeAgent);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(hkView, true);
 
+        // --- 5. HK-OPERATION: DOWNLOAD MANAGER ---
+        hkView.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
+                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+                request.setMimeType(mimetype);
+                String cookies = CookieManager.getInstance().getCookie(url);
+                request.addRequestHeader("cookie", cookies);
+                request.addRequestHeader("User-Agent", userAgent);
+                request.setDescription("Downloading file...");
+                request.setTitle(url.substring(url.lastIndexOf("/") + 1));
+                request.allowScanningByMediaScanner();
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, url.substring(url.lastIndexOf("/") + 1));
+                DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                dm.enqueue(request);
+                Toast.makeText(getApplicationContext(), "Download Started...", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // --- 6. PERMISSIONS & FILE UPLOADS ---
         hkView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                callback.invoke(origin, true, false);
+            }
+
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(() -> request.grant(request.getResources()));
+            }
+
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public boolean onShowFileChooser(WebView mWebView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
@@ -149,14 +202,20 @@ public class MainActivity extends Activity {
             }
         });
 
-        // --- 5. THE NATIVE INTERCEPTOR (WEBVIEW CLIENT) ---
+        // --- 7. THE NATIVE INTERCEPTOR (WHITE SCREEN BYPASS) ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // 👉 THE KILL SWITCH: Browser ki jagah Android ka native popup kholo
+                // External Triggers (WhatsApp, Mail, Call)
+                if (url.startsWith("intent://") || url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("whatsapp://")) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); return true; } catch (Exception e) { return false; }
+                }
+
+                // 👉 THE KILL SWITCH: Launch Native OS Account Picker instead of WebView
                 if (url.contains("accounts.google.com") || url.contains("gsi/")) {
-                    executeNativeGoogleLogin();
-                    return true; // White screen block ho gayi!
+                    Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+                    startActivityForResult(signInIntent, RC_SIGN_IN);
+                    return true; 
                 }
                 view.loadUrl(url);
                 return true;
@@ -179,7 +238,7 @@ public class MainActivity extends Activity {
                 CookieManager.getInstance().flush();
                 super.onPageFinished(view, url);
             }
-            
+
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
@@ -189,7 +248,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        // --- 6. AUTO-RECONNECT ENGINE ---
+        // --- 8. AUTO-RECONNECT ENGINE ---
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
             cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
@@ -207,12 +266,6 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // 👉 HK-OPERATION: FIRE NATIVE LOGIN
-    private void executeNativeGoogleLogin() {
-        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-        startActivityForResult(signInIntent, RC_SIGN_IN);
-    }
-
     // --- HK-OPERATION: ALL SYSTEM RESULTS HANDLER ---
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
@@ -226,12 +279,13 @@ public class MainActivity extends Activity {
                 String idToken = account.getIdToken();
                 String email = account.getEmail();
 
-                // 👉 TOKEN INJECTION: Token direct website ke javascript function ko pass kar diya
                 Toast.makeText(this, "Secure Uplink: " + email, Toast.LENGTH_SHORT).show();
+                // Pass token to your website's javascript
                 hkView.evaluateJavascript("javascript:receiveAndroidToken('" + idToken + "');", null);
 
             } catch (ApiException e) {
-                Toast.makeText(this, "Auth Intercept Failed", Toast.LENGTH_SHORT).show();
+                // Agar SHA-1 ya Web Client ID galat hoga, toh ye error aayega!
+                Toast.makeText(this, "Auth Intercept Failed. Check SHA-1 & Client ID.", Toast.LENGTH_LONG).show();
             }
             return;
         }
@@ -248,7 +302,6 @@ public class MainActivity extends Activity {
 
     // --- SECURE NO-INTERNET POPUP ---
     private void showNoInternetPopUp() {
-        // ... (Same popup logic as previous) ...
         if (internetDialog != null && internetDialog.isShowing()) return;
         LinearLayout dialogLayout = new LinearLayout(this);
         dialogLayout.setOrientation(LinearLayout.VERTICAL);
