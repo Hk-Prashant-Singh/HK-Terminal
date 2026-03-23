@@ -20,5 +20,8 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
     
+    // 👉 HK-OPERATION: NATIVE GOOGLE AUTH UPLINK (The Ultimate Bypass)
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
+    
     // SwipeRefreshLayout library destroyed for flawless mall scrolling!
 }
