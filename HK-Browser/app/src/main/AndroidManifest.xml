@@ -15,8 +15,8 @@
 
     <application 
         android:label="@string/app_name" 
-        android:icon="@drawable/ic_hk_logo"
-        android:roundIcon="@drawable/ic_hk_logo"
+        android:icon="@drawable/hk_logo"
+        android:roundIcon="@drawable/hk_logo"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         android:hardwareAccelerated="true"
         android:allowBackup="false"> 
