@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.Network;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -103,7 +104,7 @@ public class MainActivity extends Activity {
 
         layout.addView(loaderLayout);
 
-        // --- 3. HK-OPERATION: HYPER-SPEED REAL-TIME ENGINE & OAUTH BYPASS ---
+        // --- 3. HK-OPERATION: HYPER-SPEED REAL-TIME ENGINE & STEALTH OAUTH ---
         WebSettings settings = hkView.getSettings();
         
         settings.setJavaScriptEnabled(true);
@@ -113,10 +114,8 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true); 
         settings.setLoadWithOverviewMode(true); 
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
-        
-        // Form Data Save Engine
-        settings.setSaveFormData(true);
-        
+        settings.setSaveFormData(true); // Enable Device Scan/Autofill
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false); 
         }
@@ -124,7 +123,8 @@ public class MainActivity extends Activity {
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        String chromeUserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36";
+        // 👉 SPOOFING: Pixel 8 Chrome Browser (Google bypass ke liye)
+        String chromeUserAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/UD1A.230803.041) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.64 Mobile Safari/537.36";
         settings.setUserAgentString(chromeUserAgent);
         
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -144,10 +144,20 @@ public class MainActivity extends Activity {
             }
         });
 
-        // --- 5. WEBVIEW CLIENT LOGIC ---
+        // --- 5. WEBVIEW CLIENT (THE GMAIL SCAN TRIGGER) ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                // 👉 THE GMAIL SCAN TRIGGER: Link hide karega aur phone ka Gmail list dikhayega
+                if (url.contains("accounts.google.com") || url.contains("googlegmail://")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent); // System level selector trigger
+                        return true;
+                    } catch (Exception e) {
+                        return false; 
+                    }
+                }
                 view.loadUrl(url);
                 return true; 
             }
@@ -165,8 +175,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
-                // HK-OPERATION: Force cookie sync for auto-login memory
-                android.webkit.CookieManager.getInstance().flush();
+                android.webkit.CookieManager.getInstance().flush(); // Session lock
                 super.onPageFinished(view, url);
             }
 
