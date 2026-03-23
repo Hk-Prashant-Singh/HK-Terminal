@@ -1,5 +1,6 @@
 package com.hk;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -19,62 +20,68 @@ import android.view.WindowManager;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.webkit.CookieManager;
-import android.webkit.JavascriptInterface; 
-import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.ImageView; 
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+// 👉 NATIVE AUTH IMPORTS
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
+
 public class MainActivity extends Activity {
-    
+
     private WebView hkView;
     private LinearLayout loaderLayout;
     private TextView statusText;
-    private AlertDialog internetDialog; 
+    private AlertDialog internetDialog;
     private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
-    
-    private static final int REQUEST_CODE_EMAIL = 1001;
-    private String systemUserEmail = "UNKNOWN";
+
+    // HK-OPERATION: File Upload Variables
+    private ValueCallback<Uri> mUploadMessage;
+    public ValueCallback<Uri[]> uploadMessage;
+    public static final int REQUEST_SELECT_FILE = 100;
+    private final static int FILECHOOSER_RESULTCODE = 1;
+
+    // 👉 HK-OPERATION: NATIVE AUTH VARIABLES
+    private GoogleSignInClient mGoogleSignInClient;
+    private static final int RC_SIGN_IN = 9001;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // --- 1. FULLSCREEN ALPHA UI SETUP (Pitch Black) ---
+
+        // --- 1. FULLSCREEN ALPHA UI SETUP ---
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         RelativeLayout layout = new RelativeLayout(this);
-        layout.setBackgroundColor(Color.parseColor("#050505")); 
+        layout.setBackgroundColor(Color.parseColor("#050505"));
         setContentView(layout);
-        
+
         hkView = new WebView(this);
-        
-        // HARDWARE ACCELERATION
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY); 
-        
-        // 👉 HK-OPERATION: KEYBOARD FOCUS ENGINE
+        hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
         hkView.setFocusable(true);
         hkView.setFocusableInTouchMode(true);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            hkView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
-        }
 
-        // DIRECT INJECTION
         layout.addView(hkView, new RelativeLayout.LayoutParams(
-            RelativeLayout.LayoutParams.MATCH_PARENT, 
-            RelativeLayout.LayoutParams.MATCH_PARENT
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // --- 2. ELITE SPLASH LOADER (Stylish 'R' Logo + Neon Spinner) ---
+        // --- 2. ELITE SPLASH LOADER ---
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
@@ -82,13 +89,10 @@ public class MainActivity extends Activity {
         loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         loaderLayout.setLayoutParams(loaderParams);
 
-        // Dynamic Custom Logo
         ImageView splashLogo = new ImageView(this);
         int logoId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
-        if(logoId != 0) splashLogo.setImageResource(logoId);
-        splashLogo.setLayoutParams(new LinearLayout.LayoutParams(400, 400)); 
-        
-        // Stylish Pulsing Animation
+        if (logoId != 0) splashLogo.setImageResource(logoId);
+        splashLogo.setLayoutParams(new LinearLayout.LayoutParams(400, 400));
         AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.7f);
         pulse.setDuration(800);
         pulse.setRepeatMode(Animation.REVERSE);
@@ -96,7 +100,6 @@ public class MainActivity extends Activity {
         splashLogo.startAnimation(pulse);
         loaderLayout.addView(splashLogo);
 
-        // Stylish Colored Spinner (Neon Cyan)
         ProgressBar spinner = new ProgressBar(this);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             spinner.setIndeterminateTintList(ColorStateList.valueOf(Color.parseColor("#00f2fe")));
@@ -104,72 +107,67 @@ public class MainActivity extends Activity {
         loaderLayout.addView(spinner);
 
         statusText = new TextView(this);
-        statusText.setTextColor(Color.parseColor("#00f2fe")); 
-        statusText.setTextSize(16); 
+        statusText.setTextColor(Color.parseColor("#00f2fe"));
+        statusText.setTextSize(16);
         statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        statusText.setPadding(0, 40, 0, 0); 
+        statusText.setPadding(0, 40, 0, 0);
         statusText.setGravity(Gravity.CENTER);
         statusText.setText("PLEASE WAIT");
         loaderLayout.addView(statusText);
-
         layout.addView(loaderLayout);
 
-        // --- 3. HYPER-SPEED REAL-TIME ENGINE & FIREBASE OAUTH SPOOFING ---
+        // --- 3. 👉 NATIVE GOOGLE SIGN-IN ENGINE INITIALIZATION ---
+        // ALERT: "YOUR_WEB_CLIENT_ID" ko apne Firebase project ke Web Client ID se replace karna
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken("YOUR_WEB_CLIENT_ID_HERE") 
+                .requestEmail()
+                .build();
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
+        // --- 4. HYPER-SPEED REAL-TIME ENGINE ---
         WebSettings settings = hkView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); // VERY IMPORTANT FOR FIREBASE AUTH
+        settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT); 
-        settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
-        settings.setSaveFormData(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         
-        // 👉 FIREBASE BYPASS ENGINE: Removes "wv" tag. Makes Google think it's pure Chrome.
         String chromeAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
         settings.setUserAgentString(chromeAgent);
-        
-        // Allow third-party cookies so Firebase can verify the Google session
-        CookieManager cookieManager = CookieManager.getInstance();
-        cookieManager.setAcceptCookie(true);
-        cookieManager.setAcceptThirdPartyCookies(hkView, true);
-        
-        // --- 4. HARDWARE PERMISSIONS ---
+
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(hkView, true);
+
         hkView.setWebChromeClient(new WebChromeClient() {
+            @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
-            public void onPermissionRequest(final PermissionRequest request) {
-                runOnUiThread(() -> request.grant(request.getResources()));
+            public boolean onShowFileChooser(WebView mWebView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                if (uploadMessage != null) { uploadMessage.onReceiveValue(null); uploadMessage = null; }
+                uploadMessage = filePathCallback;
+                Intent intent = fileChooserParams.createIntent();
+                try { startActivityForResult(intent, REQUEST_SELECT_FILE); } catch (Exception e) { return false; }
+                return true;
             }
         });
 
-        // --- 5. WEBVIEW CLIENT (FIREBASE INTERNAL LOGIN HANDLER) ---
+        // --- 5. THE NATIVE INTERCEPTOR (WEBVIEW CLIENT) ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // Agar URL intent, mailto, ya whatsapp hai toh system ko de do
-                if (url.startsWith("intent://") || url.startsWith("mailto:") || url.startsWith("whatsapp://")) {
-                    try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        startActivity(intent);
-                        return true;
-                    } catch (Exception e) {
-                        return false; 
-                    }
+                // 👉 THE KILL SWITCH: Browser ki jagah Android ka native popup kholo
+                if (url.contains("accounts.google.com") || url.contains("gsi/")) {
+                    executeNativeGoogleLogin();
+                    return true; // White screen block ho gayi!
                 }
-                
-                // 👉 HK-OPERATION: Google accounts.com ko ANDAR hi load hone do (return false)
-                // Isse Firebase verification APK ke andar hi chalega bina white screen ke
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    return false; 
-                }
-                
-                return false; 
+                view.loadUrl(url);
+                return true;
             }
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                hkView.setVisibility(View.GONE); 
+                hkView.setVisibility(View.GONE);
                 loaderLayout.setVisibility(View.VISIBLE);
-                statusText.setText("SYNCING...");
-                statusText.setTextColor(Color.parseColor("#39FF14")); // Green neon syncing
+                statusText.setText("SYNCING DATA...");
+                statusText.setTextColor(Color.parseColor("#39FF14")); 
                 super.onPageStarted(view, url, favicon);
             }
 
@@ -177,16 +175,16 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
-                statusText.setTextColor(Color.parseColor("#00f2fe")); // Cyan back
-                CookieManager.getInstance().flush(); // Firebase Auth Token Saved to Device Memory
+                statusText.setTextColor(Color.parseColor("#00f2fe")); 
+                CookieManager.getInstance().flush();
                 super.onPageFinished(view, url);
             }
-
+            
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
-                    view.loadUrl("about:blank"); 
-                    showNoInternetPopUp(); 
+                    view.loadUrl("about:blank");
+                    showNoInternetPopUp();
                 }
             }
         });
@@ -199,63 +197,79 @@ public class MainActivity extends Activity {
                 public void onAvailable(Network network) {
                     runOnUiThread(() -> {
                         if (internetDialog != null && internetDialog.isShowing()) {
-                            internetDialog.dismiss(); 
-                            statusText.setText("PLEASE WAIT...");
-                            statusText.setTextColor(Color.parseColor("#00ff00"));
-                            hkView.loadUrl(TARGET_URL); 
+                            internetDialog.dismiss();
+                            hkView.loadUrl(TARGET_URL);
                         }
                     });
                 }
             });
         }
-
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- SECURE NO-INTERNET POPUP (GREEN PANEL / RED BUTTON) ---
+    // 👉 HK-OPERATION: FIRE NATIVE LOGIN
+    private void executeNativeGoogleLogin() {
+        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
+    }
+
+    // --- HK-OPERATION: ALL SYSTEM RESULTS HANDLER ---
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+
+        // 1. Handle Native Google Login Token
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(intent);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                String idToken = account.getIdToken();
+                String email = account.getEmail();
+
+                // 👉 TOKEN INJECTION: Token direct website ke javascript function ko pass kar diya
+                Toast.makeText(this, "Secure Uplink: " + email, Toast.LENGTH_SHORT).show();
+                hkView.evaluateJavascript("javascript:receiveAndroidToken('" + idToken + "');", null);
+
+            } catch (ApiException e) {
+                Toast.makeText(this, "Auth Intercept Failed", Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
+
+        // 2. Handle File Uploads
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (requestCode == REQUEST_SELECT_FILE) {
+                if (uploadMessage == null) return;
+                uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, intent));
+                uploadMessage = null;
+            }
+        }
+    }
+
+    // --- SECURE NO-INTERNET POPUP ---
     private void showNoInternetPopUp() {
+        // ... (Same popup logic as previous) ...
         if (internetDialog != null && internetDialog.isShowing()) return;
-        
         LinearLayout dialogLayout = new LinearLayout(this);
         dialogLayout.setOrientation(LinearLayout.VERTICAL);
-        dialogLayout.setBackgroundColor(Color.parseColor("#004D00")); 
+        dialogLayout.setBackgroundColor(Color.parseColor("#004D00"));
         dialogLayout.setPadding(60, 80, 60, 80);
         dialogLayout.setGravity(Gravity.CENTER);
-        
         TextView title = new TextView(this);
         title.setText("UPLINK DISCONNECTED");
         title.setTextColor(Color.WHITE);
         title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         dialogLayout.addView(title);
-        
-        TextView msg = new TextView(this);
-        msg.setText("\nNetwork breach detected. Check connection.\n");
-        msg.setTextColor(Color.parseColor("#A3FFA3"));
-        msg.setTypeface(Typeface.MONOSPACE);
-        msg.setGravity(Gravity.CENTER);
-        dialogLayout.addView(msg);
-        
         TextView retryBtn = new TextView(this);
         retryBtn.setText(" RETRY UPLINK ");
-        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); 
+        retryBtn.setBackgroundColor(Color.parseColor("#FF0000"));
         retryBtn.setTextColor(Color.WHITE);
         retryBtn.setPadding(30, 30, 30, 30);
-        retryBtn.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        retryBtn.setGravity(Gravity.CENTER);
-        
         retryBtn.setOnClickListener(v -> {
             hkView.loadUrl(TARGET_URL);
             if (internetDialog != null) internetDialog.dismiss();
         });
-        
-        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, 
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        btnParams.setMargins(0, 40, 0, 0);
-        retryBtn.setLayoutParams(btnParams);
         dialogLayout.addView(retryBtn);
-        
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setView(dialogLayout);
         builder.setCancelable(false);
@@ -266,7 +280,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (hkView.canGoBack()) {
-            hkView.goBack(); 
+            hkView.goBack();
         } else {
             super.onBackPressed();
         }
