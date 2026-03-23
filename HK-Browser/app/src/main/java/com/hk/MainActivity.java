@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -15,6 +16,8 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface; 
 import android.webkit.PermissionRequest;
@@ -54,127 +57,119 @@ public class MainActivity extends Activity {
         
         hkView = new WebView(this);
         
-        // HARDWARE ACCELERATION (Max GPU Usage for Speed)
+        // HARDWARE ACCELERATION
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY); 
         
-        // 👉 HK-OPERATION: DEVICE SCAN (AUTOFILL) & KEYBOARD FOCUS ENGINE 
+        // 👉 HK-OPERATION: KEYBOARD FOCUS ENGINE
         hkView.setFocusable(true);
         hkView.setFocusableInTouchMode(true);
-        hkView.requestFocus(View.FOCUS_DOWN);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             hkView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
         }
 
-        // DIRECT INJECTION (No Scroll Clash)
+        // DIRECT INJECTION
         layout.addView(hkView, new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.MATCH_PARENT, 
             RelativeLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // --- 2. SECURE LOADER SYSTEM WITH CUSTOM BRAND LOGO ---
+        // --- 2. ELITE SPLASH LOADER (Stylish 'R' Logo + Neon Spinner) ---
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
-        RelativeLayout.LayoutParams loaderParams = new RelativeLayout.LayoutParams(
-            RelativeLayout.LayoutParams.WRAP_CONTENT, 
-            RelativeLayout.LayoutParams.WRAP_CONTENT
-        );
+        RelativeLayout.LayoutParams loaderParams = new RelativeLayout.LayoutParams(-2, -2);
         loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         loaderLayout.setLayoutParams(loaderParams);
 
-        // INJECTING FRONT LOGO
+        // Dynamic Custom Logo
         ImageView splashLogo = new ImageView(this);
         int logoId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
-        if(logoId != 0) {
-            splashLogo.setImageResource(logoId);
-        }
-        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(350, 350); 
-        logoParams.setMargins(0, 0, 0, 40); 
-        splashLogo.setLayoutParams(logoParams);
+        if(logoId != 0) splashLogo.setImageResource(logoId);
+        splashLogo.setLayoutParams(new LinearLayout.LayoutParams(400, 400)); 
+        
+        // Stylish Pulsing Animation
+        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.7f);
+        pulse.setDuration(800);
+        pulse.setRepeatMode(Animation.REVERSE);
+        pulse.setRepeatCount(Animation.INFINITE);
+        splashLogo.startAnimation(pulse);
         loaderLayout.addView(splashLogo);
 
+        // Stylish Colored Spinner (Neon Cyan)
         ProgressBar spinner = new ProgressBar(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            spinner.setIndeterminateTintList(ColorStateList.valueOf(Color.parseColor("#00f2fe")));
+        }
         loaderLayout.addView(spinner);
 
         statusText = new TextView(this);
         statusText.setTextColor(Color.parseColor("#00f2fe")); 
-        statusText.setTextSize(14);
+        statusText.setTextSize(16); 
         statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        statusText.setPadding(0, 30, 0, 0);
+        statusText.setPadding(0, 40, 0, 0); 
         statusText.setGravity(Gravity.CENTER);
+        statusText.setText("PLEASE WAIT");
         loaderLayout.addView(statusText);
 
         layout.addView(loaderLayout);
 
-        // --- 3. HK-OPERATION: HYPER-SPEED REAL-TIME ENGINE & STEALTH OAUTH ---
+        // --- 3. HYPER-SPEED REAL-TIME ENGINE & FIREBASE OAUTH SPOOFING ---
         WebSettings settings = hkView.getSettings();
-        
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); 
+        settings.setDomStorageEnabled(true); // VERY IMPORTANT FOR FIREBASE AUTH
         settings.setDatabaseEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT); 
-        settings.setUseWideViewPort(true); 
-        settings.setLoadWithOverviewMode(true); 
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
-        
-        // Form Data Save Engine
         settings.setSaveFormData(true);
-        settings.setAllowFileAccess(true);
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            settings.setSafeBrowsingEnabled(false); 
-        }
-
-        settings.setLoadsImagesAutomatically(true);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        // 👉 FIREBASE BYPASS ENGINE: Removes "wv" tag. Makes Google think it's pure Chrome.
+        String chromeAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
+        settings.setUserAgentString(chromeAgent);
         
-        // 👉 SPOOFING: Pixel 7 Pro Chrome Browser (To hide URL and force Account Scan)
-        String chromeUserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.164 Mobile Safari/537.36";
-        settings.setUserAgentString(chromeUserAgent);
-        
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        // Allow third-party cookies so Firebase can verify the Google session
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(hkView, true);
         
-        // --- 4. HK STEALTH BRIDGE & PERMISSIONS ---
-        hkView.addJavascriptInterface(new HKStealthBridge(), "HK_TERMINAL");
-        
+        // --- 4. HARDWARE PERMISSIONS ---
         hkView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                runOnUiThread(() -> {
-                    request.grant(request.getResources()); 
-                });
+                runOnUiThread(() -> request.grant(request.getResources()));
             }
         });
 
-        // --- 5. WEBVIEW CLIENT (THE GMAIL POPUP & WHITE SCREEN BYPASS) ---
+        // --- 5. WEBVIEW CLIENT (FIREBASE INTERNAL LOGIN HANDLER) ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // 👉 THE OAUTH STEALTH BYPASS: System Level Account Selector Trigger
-                if (url.contains("accounts.google.com") || url.contains("gsi/")) {
+                // Agar URL intent, mailto, ya whatsapp hai toh system ko de do
+                if (url.startsWith("intent://") || url.startsWith("mailto:") || url.startsWith("whatsapp://")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent); // External App scan trigger
-                        return true; // Stop White Screen
+                        startActivity(intent);
+                        return true;
                     } catch (Exception e) {
                         return false; 
                     }
                 }
-                view.loadUrl(url);
-                return true; 
+                
+                // 👉 HK-OPERATION: Google accounts.com ko ANDAR hi load hone do (return false)
+                // Isse Firebase verification APK ke andar hi chalega bina white screen ke
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    return false; 
+                }
+                
+                return false; 
             }
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 hkView.setVisibility(View.GONE); 
                 loaderLayout.setVisibility(View.VISIBLE);
-                statusText.setText("ESTABLISHING CONNECTION...");
-                statusText.setTextColor(Color.parseColor("#00f2fe"));
+                statusText.setText("SYNCING...");
+                statusText.setTextColor(Color.parseColor("#39FF14")); // Green neon syncing
                 super.onPageStarted(view, url, favicon);
             }
 
@@ -182,8 +177,8 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
-                // HK-OPERATION: Force cookie sync for auto-login memory
-                CookieManager.getInstance().flush();
+                statusText.setTextColor(Color.parseColor("#00f2fe")); // Cyan back
+                CookieManager.getInstance().flush(); // Firebase Auth Token Saved to Device Memory
                 super.onPageFinished(view, url);
             }
 
@@ -205,10 +200,10 @@ public class MainActivity extends Activity {
                     runOnUiThread(() -> {
                         if (internetDialog != null && internetDialog.isShowing()) {
                             internetDialog.dismiss(); 
+                            statusText.setText("PLEASE WAIT...");
+                            statusText.setTextColor(Color.parseColor("#00ff00"));
+                            hkView.loadUrl(TARGET_URL); 
                         }
-                        statusText.setText("NETWORK DETECTED! RELOADING...");
-                        statusText.setTextColor(Color.parseColor("#00ff00"));
-                        hkView.loadUrl(TARGET_URL); 
                     });
                 }
             });
@@ -217,71 +212,34 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- 7. HK-OPERATION STEALTH BRIDGE (NATIVE GMAIL POPUP FALLBACK) ---
-    public class HKStealthBridge {
-        @JavascriptInterface
-        public void executeSystemLogin() {
-            runOnUiThread(() -> {
-                fetchSystemAccount();
-            });
-        }
-    }
-
-    private void fetchSystemAccount() {
-        try {
-            Intent intent = android.accounts.AccountManager.newChooseAccountIntent(
-                null, null, new String[]{"com.google"}, null, null, null, null);
-            startActivityForResult(intent, REQUEST_CODE_EMAIL);
-        } catch (Exception e) {
-            Toast.makeText(this, "SYSTEM LINK FAILED", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_EMAIL) {
-            if (resultCode == RESULT_OK && data != null) {
-                systemUserEmail = data.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME);
-                Toast.makeText(this, "SYSTEM LINKED: " + systemUserEmail, Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "LOGIN BYPASSED.", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    // --- 8. SECURE NO-INTERNET POPUP (GREEN PANEL / RED BUTTON) ---
+    // --- SECURE NO-INTERNET POPUP (GREEN PANEL / RED BUTTON) ---
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
-
+        
         LinearLayout dialogLayout = new LinearLayout(this);
         dialogLayout.setOrientation(LinearLayout.VERTICAL);
         dialogLayout.setBackgroundColor(Color.parseColor("#004D00")); 
         dialogLayout.setPadding(60, 80, 60, 80);
         dialogLayout.setGravity(Gravity.CENTER);
-
+        
         TextView title = new TextView(this);
-        title.setText("NETWORK ERROR");
+        title.setText("UPLINK DISCONNECTED");
         title.setTextColor(Color.WHITE);
-        title.setTextSize(18);
         title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        title.setGravity(Gravity.CENTER);
         dialogLayout.addView(title);
-
+        
         TextView msg = new TextView(this);
-        msg.setText("\nConnection Lost.\nCheck your uplink, Prashant bhai.\n");
-        msg.setTextColor(Color.parseColor("#A3FFA3")); 
-        msg.setTextSize(13);
+        msg.setText("\nNetwork breach detected. Check connection.\n");
+        msg.setTextColor(Color.parseColor("#A3FFA3"));
         msg.setTypeface(Typeface.MONOSPACE);
         msg.setGravity(Gravity.CENTER);
         dialogLayout.addView(msg);
-
+        
         TextView retryBtn = new TextView(this);
-        retryBtn.setText(" RETRY ");
+        retryBtn.setText(" RETRY UPLINK ");
         retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); 
         retryBtn.setTextColor(Color.WHITE);
-        retryBtn.setTextSize(16);
-        retryBtn.setPadding(0, 35, 0, 35);
+        retryBtn.setPadding(30, 30, 30, 30);
         retryBtn.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         retryBtn.setGravity(Gravity.CENTER);
         
@@ -289,45 +247,28 @@ public class MainActivity extends Activity {
             hkView.loadUrl(TARGET_URL);
             if (internetDialog != null) internetDialog.dismiss();
         });
-
+        
         LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 
             LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        btnParams.setMargins(0, 50, 0, 0);
+        btnParams.setMargins(0, 40, 0, 0);
         retryBtn.setLayoutParams(btnParams);
         dialogLayout.addView(retryBtn);
-
+        
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setView(dialogLayout);
         builder.setCancelable(false);
-        
         internetDialog = builder.create();
-        
-        if (internetDialog.getWindow() != null) {
-            internetDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        }
-        
         internetDialog.show();
     }
 
-    // --- 9. CUSTOM SECURE EXIT & GESTURE LOGIC (INSTANT SILENT KILL) ---
     @Override
     public void onBackPressed() {
         if (hkView.canGoBack()) {
             hkView.goBack(); 
         } else {
-            hkView.evaluateJavascript("javascript:(function() { " +
-                    "if (window.history.length > 1 && document.location.hash !== '') { " +
-                    "   window.history.back(); return 'JS_BACK_EXECUTED'; " +
-                    "} else { return 'READY_TO_EXIT'; } " +
-                    "})()", value -> {
-                
-                if (value != null && value.contains("READY_TO_EXIT")) {
-                    super.onBackPressed(); 
-                    finish();
-                }
-            });
+            super.onBackPressed();
         }
     }
 }
