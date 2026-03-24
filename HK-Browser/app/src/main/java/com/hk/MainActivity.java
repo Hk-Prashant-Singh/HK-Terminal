@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -39,7 +40,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-// 👉 HK-OPERATION: NATIVE GOOGLE AUTH IMPORTS
+// 👉 HK-CORE: ALPHA NATIVE AUTH IMPORTS
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -49,196 +50,231 @@ import com.google.android.gms.tasks.Task;
 
 public class MainActivity extends Activity {
 
-    // --- HK-OPERATION: CORE SYSTEM VARIABLES ---
+    // --- HK-MALL: SYSTEM CONSTANTS ---
+    private static final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
+    private static final String WEB_CLIENT_ID = "172778880682-t1ucts0ar6lqrl0klnkv2620nf46ukbv.apps.googleusercontent.com";
+    private static final int RC_SIGN_IN = 9001;
+    private static final int REQUEST_SELECT_FILE = 100;
+
+    // --- UI & ENGINE VARIABLES ---
     private WebView hkView;
     private LinearLayout loaderLayout;
     private TextView statusText;
     private AlertDialog internetDialog;
-    private final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
-
-    // --- HK-OPERATION: FILE UPLOAD MATRIX ---
-    private ValueCallback<Uri> mUploadMessage;
-    public ValueCallback<Uri[]> uploadMessage;
-    public static final int REQUEST_SELECT_FILE = 100;
-    private final static int FILECHOOSER_RESULTCODE = 1;
-
-    // --- HK-OPERATION: NATIVE AUTH VARIABLES ---
     private GoogleSignInClient mGoogleSignInClient;
-    private static final int RC_SIGN_IN = 9001;
-    // ASLI WEB CLIENT ID INJECTED
-    private static final String WEB_CLIENT_ID = "172778880682-t1ucts0ar6lqrl0klnkv2620nf46ukbv.apps.googleusercontent.com";
+    public ValueCallback<Uri[]> uploadMessage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // --- 1. FULLSCREEN ALPHA UI SETUP ---
+        // 🛡️ FULLSCREEN STEALTH UI
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
-        RelativeLayout layout = new RelativeLayout(this);
-        layout.setBackgroundColor(Color.parseColor("#050505"));
-        setContentView(layout);
+        RelativeLayout mainLayout = new RelativeLayout(this);
+        mainLayout.setBackgroundColor(Color.parseColor("#050505"));
+        setContentView(mainLayout);
 
+        // 🎯 WEBVIEW INITIALIZATION
+        initializeWebView(mainLayout);
+
+        // ⚡ SPLASH LOADER SETUP
+        setupEliteLoader(mainLayout);
+
+        // 🔑 NATIVE GOOGLE ENGINE CONFIG
+        setupGoogleAuth();
+
+        // 🛰️ AUTO-RECONNECT PROTOCOL
+        setupNetworkMonitoring();
+
+        // START SYSTEM
+        hkView.loadUrl(TARGET_URL);
+    }
+
+    private void initializeWebView(RelativeLayout layout) {
         hkView = new WebView(this);
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
-        
         hkView.setFocusable(true);
         hkView.setFocusableInTouchMode(true);
         hkView.requestFocus(View.FOCUS_DOWN);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             hkView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
         }
 
-        layout.addView(hkView, new RelativeLayout.LayoutParams(-1, -1));
-
-        // --- 2. ELITE SPLASH LOADER ---
-        loaderLayout = new LinearLayout(this);
-        loaderLayout.setOrientation(LinearLayout.VERTICAL);
-        loaderLayout.setGravity(Gravity.CENTER);
-        RelativeLayout.LayoutParams loaderParams = new RelativeLayout.LayoutParams(-2, -2);
-        loaderParams.addRule(RelativeLayout.CENTER_IN_PARENT);
-        loaderLayout.setLayoutParams(loaderParams);
-
-        ImageView splashLogo = new ImageView(this);
-        int logoId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
-        if (logoId != 0) splashLogo.setImageResource(logoId);
-        splashLogo.setLayoutParams(new LinearLayout.LayoutParams(400, 400));
-        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.6f);
-        pulse.setDuration(900);
-        pulse.setRepeatMode(Animation.REVERSE);
-        pulse.setRepeatCount(Animation.INFINITE);
-        splashLogo.startAnimation(pulse);
-        loaderLayout.addView(splashLogo);
-
-        ProgressBar spinner = new ProgressBar(this);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            spinner.setIndeterminateTintList(ColorStateList.valueOf(Color.parseColor("#00f2fe")));
-        }
-        loaderLayout.addView(spinner);
-
-        statusText = new TextView(this);
-        statusText.setTextColor(Color.parseColor("#00f2fe"));
-        statusText.setTextSize(16);
-        statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        statusText.setPadding(0, 40, 0, 0);
-        statusText.setGravity(Gravity.CENTER);
-        statusText.setText("SYSTEM INITIALIZING...");
-        loaderLayout.addView(statusText);
-        layout.addView(loaderLayout);
-
-        // --- 3. 👉 NATIVE GOOGLE SIGN-IN INITIALIZATION ---
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(WEB_CLIENT_ID) 
-                .requestEmail()
-                .build();
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-
-        // --- 4. HYPER-SPEED REAL-TIME ENGINE ---
-        WebSettings settings = hkView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); 
-        settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
-        settings.setSaveFormData(true);
-        settings.setAllowFileAccess(true);
-        settings.setGeolocationEnabled(true); 
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        settings.setSupportMultipleWindows(false); 
-
-        String chromeAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
-        settings.setUserAgentString(chromeAgent);
+        // HYPER SETTINGS
+        WebSettings s = hkView.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setGeolocationEnabled(true);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        s.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        s.setSupportMultipleWindows(false);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
+        
+        // PIXEL 8 STEALTH AGENT
+        s.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(hkView, true);
 
-        // --- 5. HK-OPERATION: DOWNLOAD MANAGER ---
-        hkView.setDownloadListener(new DownloadListener() {
-            @Override
-            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-                request.setMimeType(mimetype);
-                String cookies = CookieManager.getInstance().getCookie(url);
-                request.addRequestHeader("cookie", cookies);
-                request.addRequestHeader("User-Agent", userAgent);
-                request.setDescription("Downloading encrypted file...");
-                request.setTitle(url.substring(url.lastIndexOf("/") + 1));
-                request.allowScanningByMediaScanner();
-                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, url.substring(url.lastIndexOf("/") + 1));
-                
-                DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                if (dm != null) { dm.enqueue(request); Toast.makeText(getApplicationContext(), "Download Sequence Initiated...", Toast.LENGTH_SHORT).show(); }
-            }
-        });
+        layout.addView(hkView, new RelativeLayout.LayoutParams(-1, -1));
+        
+        setupWebViewClients();
+        setupDownloadManager();
+    }
 
-        // --- 6. PERMISSIONS & FILE UPLOADS ---
+    private void setupEliteLoader(RelativeLayout layout) {
+        loaderLayout = new LinearLayout(this);
+        loaderLayout.setOrientation(LinearLayout.VERTICAL);
+        loaderLayout.setGravity(Gravity.CENTER);
+        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-1, -1);
+        
+        ImageView logo = new ImageView(this);
+        int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
+        if (resId != 0) logo.setImageResource(resId);
+        logo.setLayoutParams(new LinearLayout.LayoutParams(450, 450));
+        
+        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.5f);
+        pulse.setDuration(800);
+        pulse.setRepeatMode(Animation.REVERSE);
+        pulse.setRepeatCount(Animation.INFINITE);
+        logo.startAnimation(pulse);
+
+        ProgressBar pb = new ProgressBar(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            pb.setIndeterminateTintList(ColorStateList.valueOf(Color.parseColor("#00f2fe")));
+        }
+
+        statusText = new TextView(this);
+        statusText.setTextColor(Color.parseColor("#00f2fe"));
+        statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        statusText.setTextSize(14);
+        statusText.setGravity(Gravity.CENTER);
+        statusText.setPadding(0, 40, 0, 0);
+        statusText.setText("HK-SYSTEM: INITIALIZING...");
+
+        loaderLayout.addView(logo);
+        loaderLayout.addView(pb);
+        loaderLayout.addView(statusText);
+        layout.addView(loaderLayout, lp);
+    }
+
+    private void setupGoogleAuth() {
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(WEB_CLIENT_ID)
+                .requestEmail()
+                .build();
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+    }
+
+    private void setupWebViewClients() {
         hkView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 callback.invoke(origin, true, false);
             }
+
             @Override
-            public void onPermissionRequest(final PermissionRequest request) {
+            public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
             }
-            @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+
             @Override
-            public boolean onShowFileChooser(WebView mWebView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                if (uploadMessage != null) { uploadMessage.onReceiveValue(null); uploadMessage = null; }
-                uploadMessage = filePathCallback;
-                Intent intent = fileChooserParams.createIntent();
-                try { startActivityForResult(intent, REQUEST_SELECT_FILE); } catch (Exception e) { return false; }
+            public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> fpc, FileChooserParams fcp) {
+                if (uploadMessage != null) uploadMessage.onReceiveValue(null);
+                uploadMessage = fpc;
+                startActivityForResult(fcp.createIntent(), REQUEST_SELECT_FILE);
                 return true;
             }
         });
 
-        // --- 7. THE NATIVE INTERCEPTOR (DEVICE ACCOUNT POP-UP TRIGGER) ---
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url.startsWith("intent://") || url.startsWith("whatsapp://") || url.startsWith("mailto:") || url.startsWith("tel:")) {
-                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); return true; } catch (Exception e) { return false; }
-                }
-                
-                // 👉 THE MAGIC: Account login trigger
+                // 👉 NATIVE BYPASS: Intercept Google Sign-In URLs
                 if (url.contains("accounts.google.com") || url.contains("gsi/")) {
-                    Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                    startActivityForResult(signInIntent, RC_SIGN_IN);
-                    return true; 
+                    startActivityForResult(mGoogleSignInClient.getSignInIntent(), RC_SIGN_IN);
+                    return true;
                 }
-                
+                if (url.startsWith("tel:") || url.startsWith("whatsapp:") || url.startsWith("mailto:")) {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                    return true;
+                }
                 view.loadUrl(url);
                 return true;
             }
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                hkView.setVisibility(View.GONE);
                 loaderLayout.setVisibility(View.VISIBLE);
-                statusText.setText("SYNCING DATA...");
-                statusText.setTextColor(Color.parseColor("#39FF14")); 
-                super.onPageStarted(view, url, favicon);
+                hkView.setVisibility(View.GONE);
+                statusText.setText("HK-MALL: SYNCING DATA...");
+                statusText.setTextColor(Color.parseColor("#39FF14"));
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
-                statusText.setTextColor(Color.parseColor("#00f2fe")); 
-                CookieManager.getInstance().flush(); 
-                super.onPageFinished(view, url);
             }
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) { view.loadUrl("about:blank"); showNoInternetPopUp(); }
+                if (request.isForMainFrame()) {
+                    view.loadUrl("about:blank");
+                    showNoInternetPopUp();
+                }
             }
         });
+    }
 
-        // --- 8. AUTO-RECONNECT ENGINE ---
+    private void setupDownloadManager() {
+        hkView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
+            DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
+            r.setMimeType(mimetype);
+            r.addRequestHeader("cookie", CookieManager.getInstance().getCookie(url));
+            r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, url.substring(url.lastIndexOf("/") + 1));
+            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (dm != null) {
+                dm.enqueue(r);
+                Toast.makeText(this, "HK-ENCRYPTED DOWNLOAD STARTED...", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        // 🛡️ GOOGLE LOGIN SUCCESS HANDLER
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                String token = account.getIdToken();
+                Toast.makeText(this, "HK-MALL: Access Granted. Tech Wizard Live!", Toast.LENGTH_LONG).show();
+                // INJECT TOKEN TO WEB APP
+                hkView.evaluateJavascript("javascript:receiveAndroidToken('" + token + "');", null);
+            } catch (ApiException e) {
+                Log.e("HK_AUTH", "Error: " + e.getStatusCode());
+                Toast.makeText(this, "HK-MALL: Auth Intercept Failed! Check SHA-1.", Toast.LENGTH_LONG).show();
+            }
+        }
+
+        // 📂 FILE UPLOAD HANDLER
+        if (requestCode == REQUEST_SELECT_FILE && uploadMessage != null) {
+            uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            uploadMessage = null;
+        }
+    }
+
+    private void setupNetworkMonitoring() {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (cm != null) {
+        if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(Network network) {
@@ -251,68 +287,33 @@ public class MainActivity extends Activity {
                 }
             });
         }
-        
-        hkView.loadUrl(TARGET_URL);
     }
 
-    // --- 9. UPLOAD & NATIVE AUTH RESULT HANDLER ---
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        super.onActivityResult(requestCode, resultCode, intent);
-
-        // 👉 HK-OPERATION: HANDLE NATIVE GOOGLE LOGIN SELECTION
-        if (requestCode == RC_SIGN_IN) {
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(intent);
-            try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                String idToken = account.getIdToken(); 
-                
-                // HK-MALL BRANDING LINE
-                Toast.makeText(this, "HK-MALL: Access Granted. Tech Wizard Live!", Toast.LENGTH_LONG).show();
-                
-                // INJECT TOKEN INTO WEBSITE
-                hkView.evaluateJavascript("javascript:receiveAndroidToken('" + idToken + "');", null);
-
-            } catch (ApiException e) {
-                Toast.makeText(this, "HK-MALL: Auth Intercept Failed! Check SHA-1.", Toast.LENGTH_LONG).show();
-            }
-            return;
-        }
-
-        // Handle File Uploads
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            if (requestCode == REQUEST_SELECT_FILE) {
-                if (uploadMessage == null) return;
-                uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, intent));
-                uploadMessage = null;
-            }
-        }
-    }
-
-    // --- 10. SECURE NO-INTERNET POPUP ---
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
-        LinearLayout dialogLayout = new LinearLayout(this);
-        dialogLayout.setOrientation(LinearLayout.VERTICAL);
-        dialogLayout.setBackgroundColor(Color.parseColor("#002200")); 
-        dialogLayout.setPadding(60, 80, 60, 80);
-        dialogLayout.setGravity(Gravity.CENTER);
-        TextView title = new TextView(this);
-        title.setText("NETWORK BREACH");
-        title.setTextColor(Color.WHITE);
-        title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        dialogLayout.addView(title);
-        TextView retryBtn = new TextView(this);
-        retryBtn.setText(" FORCE RECONNECT ");
-        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); 
-        retryBtn.setTextColor(Color.WHITE);
-        retryBtn.setPadding(40, 35, 40, 35);
-        retryBtn.setOnClickListener(v -> { hkView.loadUrl(TARGET_URL); if (internetDialog != null) internetDialog.dismiss(); });
-        dialogLayout.addView(retryBtn);
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setView(dialogLayout);
-        builder.setCancelable(false);
-        internetDialog = builder.create();
+        AlertDialog.Builder b = new AlertDialog.Builder(this);
+        LinearLayout l = new LinearLayout(this);
+        l.setOrientation(LinearLayout.VERTICAL);
+        l.setBackgroundColor(Color.parseColor("#0a0a0a"));
+        l.setPadding(50, 50, 50, 50);
+        l.setGravity(Gravity.CENTER);
+        
+        TextView t = new TextView(this);
+        t.setText("NETWORK BREACH DETECTED");
+        t.setTextColor(Color.RED);
+        t.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        
+        TextView btn = new TextView(this);
+        btn.setText(" FORCE RECONNECT ");
+        btn.setPadding(20, 20, 20, 20);
+        btn.setTextColor(Color.WHITE);
+        btn.setBackgroundColor(Color.parseColor("#222222"));
+        btn.setOnClickListener(v -> { hkView.loadUrl(TARGET_URL); internetDialog.dismiss(); });
+
+        l.addView(t);
+        l.addView(btn);
+        b.setView(l).setCancelable(false);
+        internetDialog = b.create();
         internetDialog.show();
     }
 
@@ -321,4 +322,3 @@ public class MainActivity extends Activity {
         if (hkView.canGoBack()) hkView.goBack(); else super.onBackPressed();
     }
 }
-            
