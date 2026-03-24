@@ -39,7 +39,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-// 👉 HK-OPERATION: NATIVE GOOGLE AUTH IMPORTS (For Chrome-like Device Accounts Pop-up)
+// 👉 HK-OPERATION: NATIVE GOOGLE AUTH IMPORTS
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -65,12 +65,14 @@ public class MainActivity extends Activity {
     // --- HK-OPERATION: NATIVE AUTH VARIABLES ---
     private GoogleSignInClient mGoogleSignInClient;
     private static final int RC_SIGN_IN = 9001;
+    // ASLI WEB CLIENT ID INJECTED
+    private static final String WEB_CLIENT_ID = "172778880682-t1ucts0ar6lqrl0klnkv2620nf46ukbv.apps.googleusercontent.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // --- 1. FULLSCREEN ALPHA UI SETUP (Pitch Black Fortress) ---
+        // --- 1. FULLSCREEN ALPHA UI SETUP ---
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         RelativeLayout layout = new RelativeLayout(this);
         layout.setBackgroundColor(Color.parseColor("#050505"));
@@ -124,10 +126,9 @@ public class MainActivity extends Activity {
         loaderLayout.addView(statusText);
         layout.addView(loaderLayout);
 
-        // --- 3. 👉 NATIVE GOOGLE SIGN-IN INITIALIZATION (THE DEVICE ACCOUNT PULLER) ---
-        // ⚠️ ALPHA WARNING: Replace with your actual Firebase Web Client ID!
+        // --- 3. 👉 NATIVE GOOGLE SIGN-IN INITIALIZATION ---
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("YOUR_WEB_CLIENT_ID_HERE") 
+                .requestIdToken(WEB_CLIENT_ID) 
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
@@ -200,7 +201,7 @@ public class MainActivity extends Activity {
                     try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); return true; } catch (Exception e) { return false; }
                 }
                 
-                // 👉 THE MAGIC: Ye code WebView ko rok kar Native Phone Account Selector Pop-up layega!
+                // 👉 THE MAGIC: Account login trigger
                 if (url.contains("accounts.google.com") || url.contains("gsi/")) {
                     Intent signInIntent = mGoogleSignInClient.getSignInIntent();
                     startActivityForResult(signInIntent, RC_SIGN_IN);
@@ -264,16 +265,16 @@ public class MainActivity extends Activity {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(intent);
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
-                String idToken = account.getIdToken(); // Verified Token from Google OS
-                String email = account.getEmail();
-
-                Toast.makeText(this, "Device Account Linked: " + email, Toast.LENGTH_SHORT).show();
+                String idToken = account.getIdToken(); 
+                
+                // HK-MALL BRANDING LINE
+                Toast.makeText(this, "HK-MALL: Access Granted. Tech Wizard Live!", Toast.LENGTH_LONG).show();
                 
                 // INJECT TOKEN INTO WEBSITE
                 hkView.evaluateJavascript("javascript:receiveAndroidToken('" + idToken + "');", null);
 
             } catch (ApiException e) {
-                Toast.makeText(this, "Auth Intercept Failed. Missing SHA-1 in Firebase!", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "HK-MALL: Auth Intercept Failed! Check SHA-1.", Toast.LENGTH_LONG).show();
             }
             return;
         }
@@ -320,3 +321,4 @@ public class MainActivity extends Activity {
         if (hkView.canGoBack()) hkView.goBack(); else super.onBackPressed();
     }
 }
+            
