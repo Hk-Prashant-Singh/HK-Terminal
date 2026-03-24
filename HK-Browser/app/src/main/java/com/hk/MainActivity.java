@@ -1,6 +1,6 @@
 package com.hk;
 
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
@@ -16,6 +16,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -23,8 +25,7 @@ import android.view.WindowManager;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.webkit.CookieManager;
-import android.webkit.DownloadListener;
-import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -40,7 +41,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-// 👉 HK-CORE: ALPHA NATIVE AUTH IMPORTS
+// HK-CORE: AUTH & GOOGLE SERVICES
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -50,13 +51,12 @@ import com.google.android.gms.tasks.Task;
 
 public class MainActivity extends Activity {
 
-    // --- HK-MALL: SYSTEM CONSTANTS ---
+    // ⚡ HK-SYSTEM CONSTANTS
     private static final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
     private static final String WEB_CLIENT_ID = "172778880682-t1ucts0ar6lqrl0klnkv2620nf46ukbv.apps.googleusercontent.com";
     private static final int RC_SIGN_IN = 9001;
     private static final int REQUEST_SELECT_FILE = 100;
 
-    // --- UI & ENGINE VARIABLES ---
     private WebView hkView;
     private LinearLayout loaderLayout;
     private TextView statusText;
@@ -67,42 +67,27 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // 🛡️ FULLSCREEN STEALTH UI
+        
+        // 🛡️ STEALTH UI: HARDWARE ACCELERATED & FULLSCREEN
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         RelativeLayout mainLayout = new RelativeLayout(this);
         mainLayout.setBackgroundColor(Color.parseColor("#050505"));
         setContentView(mainLayout);
 
-        // 🎯 WEBVIEW INITIALIZATION
         initializeWebView(mainLayout);
-
-        // ⚡ SPLASH LOADER SETUP
         setupEliteLoader(mainLayout);
-
-        // 🔑 NATIVE GOOGLE ENGINE CONFIG
         setupGoogleAuth();
-
-        // 🛰️ AUTO-RECONNECT PROTOCOL
         setupNetworkMonitoring();
 
-        // START SYSTEM
+        // 🛰️ FIRING TARGET
         hkView.loadUrl(TARGET_URL);
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private void initializeWebView(RelativeLayout layout) {
         hkView = new WebView(this);
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
-        hkView.setFocusable(true);
-        hkView.setFocusableInTouchMode(true);
-        hkView.requestFocus(View.FOCUS_DOWN);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            hkView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
-        }
-
-        // HYPER SETTINGS
+        
         WebSettings s = hkView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -110,12 +95,14 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(true);
         s.setGeolocationEnabled(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        s.setRenderPriority(WebSettings.RenderPriority.HIGH);
-        s.setSupportMultipleWindows(false);
         s.setJavaScriptCanOpenWindowsAutomatically(true);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // PIXEL 8 STEALTH AGENT
-        s.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
+        // 🔗 THE BRIDGE: NATIVE TO WEB HANDSHAKE
+        hkView.addJavascriptInterface(new HkWebBridge(), "AndroidInterface");
+
+        // 🛡️ USER AGENT: PIXEL 8 STEALTH PRO
+        s.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(hkView, true);
@@ -124,42 +111,6 @@ public class MainActivity extends Activity {
         
         setupWebViewClients();
         setupDownloadManager();
-    }
-
-    private void setupEliteLoader(RelativeLayout layout) {
-        loaderLayout = new LinearLayout(this);
-        loaderLayout.setOrientation(LinearLayout.VERTICAL);
-        loaderLayout.setGravity(Gravity.CENTER);
-        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-1, -1);
-        
-        ImageView logo = new ImageView(this);
-        int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
-        if (resId != 0) logo.setImageResource(resId);
-        logo.setLayoutParams(new LinearLayout.LayoutParams(450, 450));
-        
-        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.5f);
-        pulse.setDuration(800);
-        pulse.setRepeatMode(Animation.REVERSE);
-        pulse.setRepeatCount(Animation.INFINITE);
-        logo.startAnimation(pulse);
-
-        ProgressBar pb = new ProgressBar(this);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            pb.setIndeterminateTintList(ColorStateList.valueOf(Color.parseColor("#00f2fe")));
-        }
-
-        statusText = new TextView(this);
-        statusText.setTextColor(Color.parseColor("#00f2fe"));
-        statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        statusText.setTextSize(14);
-        statusText.setGravity(Gravity.CENTER);
-        statusText.setPadding(0, 40, 0, 0);
-        statusText.setText("HK-SYSTEM: INITIALIZING...");
-
-        loaderLayout.addView(logo);
-        loaderLayout.addView(pb);
-        loaderLayout.addView(statusText);
-        layout.addView(loaderLayout, lp);
     }
 
     private void setupGoogleAuth() {
@@ -172,11 +123,6 @@ public class MainActivity extends Activity {
 
     private void setupWebViewClients() {
         hkView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                callback.invoke(origin, true, false);
-            }
-
             @Override
             public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
@@ -194,82 +140,105 @@ public class MainActivity extends Activity {
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // 👉 NATIVE BYPASS: Intercept Google Sign-In URLs
+                // 🛑 AUTH INTERCEPT: Catch Google login attempts
                 if (url.contains("accounts.google.com") || url.contains("gsi/")) {
-                    startActivityForResult(mGoogleSignInClient.getSignInIntent(), RC_SIGN_IN);
+                    triggerNativeLogin();
                     return true;
                 }
                 if (url.startsWith("tel:") || url.startsWith("whatsapp:") || url.startsWith("mailto:")) {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                     return true;
                 }
-                view.loadUrl(url);
-                return true;
+                return false; 
             }
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 loaderLayout.setVisibility(View.VISIBLE);
-                hkView.setVisibility(View.GONE);
-                statusText.setText("HK-MALL: SYNCING DATA...");
-                statusText.setTextColor(Color.parseColor("#39FF14"));
+                statusText.setText("HK-MALL: ENCRYPTING SESSION...");
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 loaderLayout.setVisibility(View.GONE);
-                hkView.setVisibility(View.VISIBLE);
+                CookieManager.getInstance().flush();
             }
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) {
-                    view.loadUrl("about:blank");
-                    showNoInternetPopUp();
-                }
+                if (request.isForMainFrame()) showNoInternetPopUp();
             }
         });
     }
 
-    private void setupDownloadManager() {
-        hkView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
-            DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
-            r.setMimeType(mimetype);
-            r.addRequestHeader("cookie", CookieManager.getInstance().getCookie(url));
-            r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, url.substring(url.lastIndexOf("/") + 1));
-            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-            if (dm != null) {
-                dm.enqueue(r);
-                Toast.makeText(this, "HK-ENCRYPTED DOWNLOAD STARTED...", Toast.LENGTH_SHORT).show();
-            }
-        });
+    private void triggerNativeLogin() {
+        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // 🛡️ GOOGLE LOGIN SUCCESS HANDLER
+        // 🔑 AUTH SUCCESS: TRANSMIT TOKEN TO WEB-CORE
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
-                String token = account.getIdToken();
-                Toast.makeText(this, "HK-MALL: Access Granted. Tech Wizard Live!", Toast.LENGTH_LONG).show();
-                // INJECT TOKEN TO WEB APP
-                hkView.evaluateJavascript("javascript:receiveAndroidToken('" + token + "');", null);
+                String idToken = account.getIdToken();
+                
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    hkView.evaluateJavascript("javascript:if(window.receiveAndroidToken){ window.receiveAndroidToken('" + idToken + "'); }", null);
+                    Toast.makeText(MainActivity.this, "TECH WIZARD: SYSTEM BYPASS GRANTED!", Toast.LENGTH_SHORT).show();
+                }, 500);
+
             } catch (ApiException e) {
-                Log.e("HK_AUTH", "Error: " + e.getStatusCode());
-                Toast.makeText(this, "HK-MALL: Auth Intercept Failed! Check SHA-1.", Toast.LENGTH_LONG).show();
+                Log.e("HK_ERROR", "Auth Failed Code: " + e.getStatusCode());
+                Toast.makeText(this, "HK-SECURITY: Breach Detected! SHA-1 Error.", Toast.LENGTH_LONG).show();
             }
         }
 
-        // 📂 FILE UPLOAD HANDLER
+        // 📂 FILE SELECTOR
         if (requestCode == REQUEST_SELECT_FILE && uploadMessage != null) {
             uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
             uploadMessage = null;
         }
+    }
+
+    // --- HK-BRIDGE: ALPHA COMMUNICATION ---
+    private class HkWebBridge {
+        @JavascriptInterface
+        public void startGoogleLogin() {
+            runOnUiThread(() -> triggerNativeLogin());
+        }
+        
+        @JavascriptInterface
+        public void showHkToast(String msg) {
+            Toast.makeText(MainActivity.this, "HK: " + msg, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // --- ELITE UI COMPONENTS ---
+    private void setupEliteLoader(RelativeLayout layout) {
+        loaderLayout = new LinearLayout(this);
+        loaderLayout.setOrientation(LinearLayout.VERTICAL);
+        loaderLayout.setGravity(Gravity.CENTER);
+        loaderLayout.setBackgroundColor(Color.parseColor("#050505"));
+        
+        ProgressBar pb = new ProgressBar(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            pb.setIndeterminateTintList(ColorStateList.valueOf(Color.parseColor("#00f2fe")));
+        }
+
+        statusText = new TextView(this);
+        statusText.setTextColor(Color.parseColor("#00f2fe"));
+        statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        statusText.setText("HK-SYSTEM: INITIALIZING...");
+        statusText.setPadding(0, 40, 0, 0);
+
+        loaderLayout.addView(pb);
+        loaderLayout.addView(statusText);
+        layout.addView(loaderLayout, new RelativeLayout.LayoutParams(-1, -1));
     }
 
     private void setupNetworkMonitoring() {
@@ -278,43 +247,28 @@ public class MainActivity extends Activity {
             cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(Network network) {
-                    runOnUiThread(() -> {
-                        if (internetDialog != null && internetDialog.isShowing()) {
-                            internetDialog.dismiss();
-                            hkView.loadUrl(TARGET_URL);
-                        }
-                    });
+                    runOnUiThread(() -> { if (internetDialog != null) internetDialog.dismiss(); });
                 }
             });
         }
     }
 
     private void showNoInternetPopUp() {
-        if (internetDialog != null && internetDialog.isShowing()) return;
-        AlertDialog.Builder b = new AlertDialog.Builder(this);
-        LinearLayout l = new LinearLayout(this);
-        l.setOrientation(LinearLayout.VERTICAL);
-        l.setBackgroundColor(Color.parseColor("#0a0a0a"));
-        l.setPadding(50, 50, 50, 50);
-        l.setGravity(Gravity.CENTER);
-        
-        TextView t = new TextView(this);
-        t.setText("NETWORK BREACH DETECTED");
-        t.setTextColor(Color.RED);
-        t.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        
-        TextView btn = new TextView(this);
-        btn.setText(" FORCE RECONNECT ");
-        btn.setPadding(20, 20, 20, 20);
-        btn.setTextColor(Color.WHITE);
-        btn.setBackgroundColor(Color.parseColor("#222222"));
-        btn.setOnClickListener(v -> { hkView.loadUrl(TARGET_URL); internetDialog.dismiss(); });
+        runOnUiThread(() -> {
+            AlertDialog.Builder b = new AlertDialog.Builder(this);
+            b.setTitle("⚠️ NETWORK BREACH").setMessage("System Offline. Check Connection.").setCancelable(false);
+            internetDialog = b.show();
+        });
+    }
 
-        l.addView(t);
-        l.addView(btn);
-        b.setView(l).setCancelable(false);
-        internetDialog = b.create();
-        internetDialog.show();
+    private void setupDownloadManager() {
+        hkView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
+            DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
+            r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "HK_MALL_FILE_" + System.currentTimeMillis());
+            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (dm != null) dm.enqueue(r);
+        });
     }
 
     @Override
