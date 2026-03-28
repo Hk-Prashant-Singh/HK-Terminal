@@ -43,6 +43,19 @@ public class MainActivity extends Activity {
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
 
+    // 🛡️ THE ALPHA BRIDGE: Website aur APK ko connect karne ke liye
+    public class WebAppInterface {
+        Context mContext;
+        WebAppInterface(Context c) { mContext = c; }
+
+        @JavascriptInterface
+        public void triggerGoogleLogin() {
+            // Jab website pe 'Login' button dabega, ye trigger hoga
+            Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+            ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,6 +134,13 @@ public class MainActivity extends Activity {
         // ⚡ NATIVE PIXEL 8 SPOOFING
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
+        // GSI Bypass & Multiple Windows fix
+        settings.setSupportMultipleWindows(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+        // 🛡️ THE MASTER BRIDGE INJECTED HERE
+        hkView.addJavascriptInterface(new WebAppInterface(this), "AndroidHost");
+
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(hkView, true);
     }
@@ -146,11 +166,7 @@ public class MainActivity extends Activity {
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // 🎯 THE INTERCEPTOR (Triggers Native Login)
-                if (url.contains("accounts.google.com") || url.contains("gsi/")) {
-                    startActivityForResult(mGoogleSignInClient.getSignInIntent(), RC_SIGN_IN);
-                    return true;
-                }
+                // Intercept hataya gaya hai taaki naya Bridge perfectly kaam kare
                 view.loadUrl(url);
                 return true;
             }
@@ -180,7 +196,7 @@ public class MainActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // 👉 THE SHOOTER: GET TOKEN AND FIRE TO WEBSITE
+        // 👉 THE SHOOTER: GET TOKEN AND FIRE TO WEBSITE (NEW LOGIC)
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
@@ -189,12 +205,14 @@ public class MainActivity extends Activity {
 
                 Toast.makeText(this, "HK-MALL: Access Granted. Tech Wizard Live!", Toast.LENGTH_LONG).show();
 
-                // 🚀 FIRING TOKEN TO HTML 'CATCHER'
-                String js = "window.postMessage({type:'ANDROID_LOGIN',token:'" + idToken + "'},'*');";
-                hkView.evaluateJavascript(js, null);
+                // 🚀 FIRING TOKEN TO HTML 'CATCHER' VIA JAVASCRIPT DIRECT EXECUTION
+                String js = "javascript:(function() { " +
+                            "if(window.handleAndroidLogin) { window.handleAndroidLogin('" + idToken + "'); }" +
+                            "})()";
+                hkView.post(() -> hkView.evaluateJavascript(js, null));
 
-            } catch (Exception e) {
-                Toast.makeText(this, "Auth Intercept Failed!", Toast.LENGTH_LONG).show();
+            } catch (ApiException e) {
+                Toast.makeText(this, "Auth Intercept Failed! Code: " + e.getStatusCode(), Toast.LENGTH_LONG).show();
             }
         }
 
@@ -254,4 +272,4 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (hkView.canGoBack()) hkView.goBack(); else super.onBackPressed();
     }
-}
+                                                             }
