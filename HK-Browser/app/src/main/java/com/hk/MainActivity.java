@@ -43,14 +43,13 @@ public class MainActivity extends Activity {
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
 
-    // 🛡️ THE ALPHA BRIDGE: Website aur APK ko connect karne ke liye (NEW ADDED)
+    // 🛡️ THE ALPHA BRIDGE: Direct WebView to Native Hijack
     public class WebAppInterface {
         Context mContext;
         WebAppInterface(Context c) { mContext = c; }
 
         @JavascriptInterface
         public void triggerGoogleLogin() {
-            // Jab website pe 'Login' button dabega, ye native popup trigger hoga
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
         }
@@ -60,10 +59,10 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 🛡️ ALPHA STEALTH UI SETTINGS
+        // STEALTH UI SETTINGS
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         RelativeLayout mainLayout = new RelativeLayout(this);
-        mainLayout.setBackgroundColor(Color.parseColor("#050505")); // Dark Matrix Theme
+        mainLayout.setBackgroundColor(Color.parseColor("#050505")); 
         setContentView(mainLayout);
 
         hkView = new WebView(this);
@@ -82,7 +81,6 @@ public class MainActivity extends Activity {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
-        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-1, -1);
         
         ImageView logo = new ImageView(this);
         int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
@@ -110,7 +108,7 @@ public class MainActivity extends Activity {
         loaderLayout.addView(logo);
         loaderLayout.addView(bar);
         loaderLayout.addView(statusText);
-        layout.addView(loaderLayout, lp);
+        layout.addView(loaderLayout, new RelativeLayout.LayoutParams(-1, -1));
     }
 
     private void setupGoogle() {
@@ -131,14 +129,14 @@ public class MainActivity extends Activity {
         settings.setGeolocationEnabled(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // ⚡ NATIVE PIXEL 8 SPOOFING
+        // NATIVE DEVICE SPOOFING
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
-        // --- NEW ALPHA UPGRADES ADDED ---
         settings.setSupportMultipleWindows(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        
+        // TUNNEL ACTIVATED
         hkView.addJavascriptInterface(new WebAppInterface(this), "AndroidHost");
-        // ---------------------------------
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(hkView, true);
@@ -165,21 +163,7 @@ public class MainActivity extends Activity {
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // 🎯 THE INTERCEPTOR (Triggers Native Login)
-                // Bhai, tera code commented rakha hai taaki ek bhi line minus na ho.
-                /*
-                if (url.contains("accounts.google.com") || url.contains("gsi/")) {
-                    startActivityForResult(mGoogleSignInClient.getSignInIntent(), RC_SIGN_IN);
-                    return true;
-                }
-                */
-                
-                // --- NEW SAFE LOGIC ---
-                if (url.startsWith("intent://")) {
-                    return true; // Intent URLs block kiya crash bachane ke liye
-                }
-                // ----------------------
-                
+                if (url.startsWith("intent://")) { return true; } // Prevent intent crashes
                 view.loadUrl(url);
                 return true;
             }
@@ -188,7 +172,7 @@ public class MainActivity extends Activity {
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 loaderLayout.setVisibility(View.VISIBLE);
                 hkView.setVisibility(View.GONE);
-                statusText.setText("SYNCING DATA...");
+                statusText.setText("SYNCING DATA VAULT...");
             }
 
             @Override
@@ -209,33 +193,28 @@ public class MainActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // 👉 THE SHOOTER: GET TOKEN AND FIRE TO WEBSITE
+        // 🎯 THE SHOOTER: GET TOKEN AND INJECT TO HTML
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 String idToken = account.getIdToken();
 
-                Toast.makeText(this, "HK-MALL: Access Granted. Tech Wizard Live!", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "HK-MALL: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
 
-                // 🚀 FIRING TOKEN TO HTML 'CATCHER'
-                // Tera purana code commented rakha hai, ek bhi line delete nahi ki!
-                // String js = "window.postMessage({type:'ANDROID_LOGIN',token:'" + idToken + "'},'*');";
-                
-                // --- NAYA SECURE INJECTOR ---
+                // INJECT TOKEN SAFELY INTO JAVASCRIPT
                 String js = "javascript:(function() { " +
                             "if(window.handleAndroidLogin) { window.handleAndroidLogin('" + idToken + "'); }" +
+                            "else { alert('System Breach: Master Receiver Not Found'); }" +
                             "})()";
-                // ----------------------------
                 hkView.evaluateJavascript(js, null);
 
             } catch (Exception e) {
-                Toast.makeText(this, "Auth Intercept Failed!", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Auth Intercept Failed! Check SHA-1 Key.", Toast.LENGTH_LONG).show();
             }
         }
 
-        if (requestCode == REQUEST_SELECT_FILE) {
-            if (uploadMessage == null) return;
+        if (requestCode == REQUEST_SELECT_FILE && uploadMessage != null) {
             uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
             uploadMessage = null;
         }
