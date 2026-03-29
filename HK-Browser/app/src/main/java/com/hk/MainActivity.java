@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -16,6 +17,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -42,6 +44,9 @@ public class MainActivity extends Activity {
     private AlertDialog internetDialog;
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
+    
+    // 🛡️ HK NATIVE VAULT (Local Storage for Auto Login)
+    private SharedPreferences hkElitePrefs;
 
     // 🛡️ THE ALPHA BRIDGE: Direct WebView to Native Hijack
     public class WebAppInterface {
@@ -58,6 +63,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // INITIALIZE NATIVE LOCAL STORAGE
+        hkElitePrefs = getSharedPreferences("HK_ELITE_VAULT", MODE_PRIVATE);
 
         // STEALTH UI SETTINGS
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
@@ -180,6 +188,20 @@ public class MainActivity extends Activity {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
                 CookieManager.getInstance().flush();
+
+                // ⚡ [NEW] ALPHA AUTO-LOGIN ENGINE
+                // Check karega ki Google Session zinda hai ya nahi. Agar hai toh auto-inject token.
+                GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(MainActivity.this);
+                if (account != null && account.getIdToken() != null) {
+                    String savedToken = account.getIdToken();
+                    String autoLoginJs = "javascript:(function() { " +
+                            "if(window.handleAndroidLogin && !localStorage.getItem('hk_elite_user')) { " +
+                            "console.log('[HK-SYSTEM] AUTO-LOGIN EXECUTED'); " +
+                            "window.handleAndroidLogin('" + savedToken + "'); " +
+                            "} " +
+                            "})()";
+                    view.evaluateJavascript(autoLoginJs, null);
+                }
             }
             
             @Override
@@ -199,6 +221,10 @@ public class MainActivity extends Activity {
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 String idToken = account.getIdToken();
+                String userEmail = account.getEmail();
+
+                // ⚡ [NEW] SAVE TO NATIVE LOCAL STORAGE (SharedPreferences)
+                hkElitePrefs.edit().putString("SECURE_EMAIL", userEmail).putString("SECURE_TOKEN", idToken).apply();
 
                 Toast.makeText(this, "HK-MALL: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
 
@@ -208,6 +234,12 @@ public class MainActivity extends Activity {
                             "else { alert('System Breach: Master Receiver Not Found'); }" +
                             "})()";
                 hkView.evaluateJavascript(js, null);
+
+                // ⚡ [NEW] FORCE AUTOMATIC REFRESH AFTER 2.5 SECONDS (Allows Firebase to sync first)
+                new Handler().postDelayed(() -> {
+                    Toast.makeText(MainActivity.this, "Tech Wizard System Refreshing...", Toast.LENGTH_SHORT).show();
+                    hkView.reload();
+                }, 2500);
 
             } catch (Exception e) {
                 Toast.makeText(this, "Auth Intercept Failed! Check SHA-1 Key.", Toast.LENGTH_LONG).show();
