@@ -7,10 +7,10 @@ import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.Uri;
@@ -40,7 +40,7 @@ public class MainActivity extends Activity {
 
     private WebView hkView;
     private LinearLayout loaderLayout;
-    private TextView statusText;
+    private View hkDot; // Small blinking dot
     private AlertDialog internetDialog;
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
@@ -85,37 +85,30 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
+    // --- UI SETUP: Modified Loading Screen to small orange blinking dot ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
+
+        hkDot = new View(this);
         
-        ImageView logo = new ImageView(this);
-        int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
-        if (resId != 0) logo.setImageResource(resId);
-        logo.setLayoutParams(new LinearLayout.LayoutParams(450, 450));
-        
-        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.4f);
-        pulse.setDuration(800);
-        pulse.setRepeatMode(Animation.REVERSE);
-        pulse.setRepeatCount(Animation.INFINITE);
-        logo.startAnimation(pulse);
+        GradientDrawable dotShape = new GradientDrawable();
+        dotShape.setShape(GradientDrawable.OVAL);
+        dotShape.setColor(Color.parseColor("#FF8C00")); // Dark Orange / Emoji Orange
+        hkDot.setBackground(dotShape);
 
-        ProgressBar bar = new ProgressBar(this);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            bar.setIndeterminateTintList(ColorStateList.valueOf(Color.parseColor("#00f2fe")));
-        }
+        int dotSize = 40; // Small size like an emoji dot
+        LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
+        hkDot.setLayoutParams(dotParams);
 
-        statusText = new TextView(this);
-        statusText.setTextColor(Color.parseColor("#00f2fe"));
-        statusText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        statusText.setText("HK SYSTEM: INITIALIZING...");
-        statusText.setPadding(0, 40, 0, 0);
-        statusText.setGravity(Gravity.CENTER);
+        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.3f); 
+        pulse.setDuration(600); 
+        pulse.setRepeatMode(Animation.REVERSE); 
+        pulse.setRepeatCount(Animation.INFINITE); 
+        hkDot.startAnimation(pulse);
 
-        loaderLayout.addView(logo);
-        loaderLayout.addView(bar);
-        loaderLayout.addView(statusText);
+        loaderLayout.addView(hkDot);
         layout.addView(loaderLayout, new RelativeLayout.LayoutParams(-1, -1));
     }
 
@@ -180,7 +173,6 @@ public class MainActivity extends Activity {
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 loaderLayout.setVisibility(View.VISIBLE);
                 hkView.setVisibility(View.GONE);
-                statusText.setText("SYNCING DATA VAULT...");
             }
 
             @Override
@@ -190,7 +182,6 @@ public class MainActivity extends Activity {
                 CookieManager.getInstance().flush();
 
                 // ⚡ [NEW] ALPHA AUTO-LOGIN ENGINE
-                // Check karega ki Google Session zinda hai ya nahi. Agar hai toh auto-inject token.
                 GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(MainActivity.this);
                 if (account != null && account.getIdToken() != null) {
                     String savedToken = account.getIdToken();
@@ -223,7 +214,7 @@ public class MainActivity extends Activity {
                 String idToken = account.getIdToken();
                 String userEmail = account.getEmail();
 
-                // ⚡ [NEW] SAVE TO NATIVE LOCAL STORAGE (SharedPreferences)
+                // ⚡ [NEW] SAVE TO NATIVE LOCAL STORAGE
                 hkElitePrefs.edit().putString("SECURE_EMAIL", userEmail).putString("SECURE_TOKEN", idToken).apply();
 
                 Toast.makeText(this, "HK-MALL: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
@@ -235,7 +226,7 @@ public class MainActivity extends Activity {
                             "})()";
                 hkView.evaluateJavascript(js, null);
 
-                // ⚡ [NEW] FORCE AUTOMATIC REFRESH AFTER 2.5 SECONDS (Allows Firebase to sync first)
+                // ⚡ [NEW] FORCE AUTOMATIC REFRESH AFTER 2.5 SECONDS
                 new Handler().postDelayed(() -> {
                     Toast.makeText(MainActivity.this, "Tech Wizard System Refreshing...", Toast.LENGTH_SHORT).show();
                     hkView.reload();
