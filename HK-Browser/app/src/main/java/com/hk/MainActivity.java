@@ -40,12 +40,11 @@ public class MainActivity extends Activity {
 
     private WebView hkView;
     private LinearLayout loaderLayout;
-    private View hkDot; // Small blinking dot
+    private View hkDot; 
     private AlertDialog internetDialog;
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
     
-    // 🛡️ HK NATIVE VAULT (Local Storage for Auto Login)
     private SharedPreferences hkElitePrefs;
 
     // 🛡️ THE ALPHA BRIDGE: Direct WebView to Native Hijack
@@ -58,16 +57,26 @@ public class MainActivity extends Activity {
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
         }
+
+        // ⚡ [NEW] NATIVE LOGOUT DESTROYER
+        @JavascriptInterface
+        public void triggerGoogleLogout() {
+            if (mGoogleSignInClient != null) {
+                mGoogleSignInClient.signOut(); // Kills Google Session
+            }
+            hkElitePrefs.edit().clear().apply(); // Clears Native Vault
+            ((Activity)mContext).runOnUiThread(() -> {
+                Toast.makeText(mContext, "HK-SYSTEM: Native Session Destroyed", Toast.LENGTH_SHORT).show();
+            });
+        }
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // INITIALIZE NATIVE LOCAL STORAGE
         hkElitePrefs = getSharedPreferences("HK_ELITE_VAULT", MODE_PRIVATE);
 
-        // STEALTH UI SETTINGS
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         RelativeLayout mainLayout = new RelativeLayout(this);
         mainLayout.setBackgroundColor(Color.parseColor("#050505")); 
@@ -85,13 +94,11 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- UI SETUP: APK Logo + Small Orange Blinking Dot ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
 
-        // 1. ORIGINAL HK LOGO (Blinking)
         ImageView logo = new ImageView(this);
         int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
         if (resId != 0) logo.setImageResource(resId);
@@ -103,16 +110,15 @@ public class MainActivity extends Activity {
         logoPulse.setRepeatCount(Animation.INFINITE);
         logo.startAnimation(logoPulse);
 
-        // 2. SMALL ORANGE DOT (Blinking Below Logo)
         hkDot = new View(this);
         GradientDrawable dotShape = new GradientDrawable();
         dotShape.setShape(GradientDrawable.OVAL);
-        dotShape.setColor(Color.parseColor("#FF8C00")); // Dark Orange Emoji Color
+        dotShape.setColor(Color.parseColor("#FF8C00")); 
         hkDot.setBackground(dotShape);
 
-        int dotSize = 40; // Small size like an emoji dot
+        int dotSize = 40; 
         LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-        dotParams.topMargin = 40; // Space between logo and dot
+        dotParams.topMargin = 40; 
         hkDot.setLayoutParams(dotParams);
 
         AlphaAnimation dotPulse = new AlphaAnimation(1.0f, 0.3f); 
@@ -121,7 +127,6 @@ public class MainActivity extends Activity {
         dotPulse.setRepeatCount(Animation.INFINITE); 
         hkDot.startAnimation(dotPulse);
 
-        // ADD BOTH TO LOADER
         loaderLayout.addView(logo);
         loaderLayout.addView(hkDot);
         
@@ -146,13 +151,10 @@ public class MainActivity extends Activity {
         settings.setGeolocationEnabled(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // NATIVE DEVICE SPOOFING
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
-
         settings.setSupportMultipleWindows(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         
-        // TUNNEL ACTIVATED
         hkView.addJavascriptInterface(new WebAppInterface(this), "AndroidHost");
 
         CookieManager.getInstance().setAcceptCookie(true);
@@ -180,7 +182,7 @@ public class MainActivity extends Activity {
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url.startsWith("intent://")) { return true; } // Prevent intent crashes
+                if (url.startsWith("intent://")) { return true; } 
                 view.loadUrl(url);
                 return true;
             }
@@ -197,7 +199,7 @@ public class MainActivity extends Activity {
                 hkView.setVisibility(View.VISIBLE);
                 CookieManager.getInstance().flush();
 
-                // ⚡ [NEW] ALPHA AUTO-LOGIN ENGINE
+                // ⚡ AUTO-LOGIN ENGINE
                 GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(MainActivity.this);
                 if (account != null && account.getIdToken() != null) {
                     String savedToken = account.getIdToken();
@@ -222,7 +224,6 @@ public class MainActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // 🎯 THE SHOOTER: GET TOKEN AND INJECT TO HTML
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
@@ -230,19 +231,16 @@ public class MainActivity extends Activity {
                 String idToken = account.getIdToken();
                 String userEmail = account.getEmail();
 
-                // ⚡ [NEW] SAVE TO NATIVE LOCAL STORAGE
                 hkElitePrefs.edit().putString("SECURE_EMAIL", userEmail).putString("SECURE_TOKEN", idToken).apply();
 
                 Toast.makeText(this, "HK-MALL: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
 
-                // INJECT TOKEN SAFELY INTO JAVASCRIPT
                 String js = "javascript:(function() { " +
                             "if(window.handleAndroidLogin) { window.handleAndroidLogin('" + idToken + "'); }" +
                             "else { alert('System Breach: Master Receiver Not Found'); }" +
                             "})()";
                 hkView.evaluateJavascript(js, null);
 
-                // ⚡ [NEW] FORCE AUTOMATIC REFRESH AFTER 2.5 SECONDS
                 new Handler().postDelayed(() -> {
                     Toast.makeText(MainActivity.this, "Tech Wizard System Refreshing...", Toast.LENGTH_SHORT).show();
                     hkView.reload();
