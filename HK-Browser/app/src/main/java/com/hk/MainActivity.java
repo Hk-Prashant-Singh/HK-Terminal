@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
     
+    // 🛡️ HK NATIVE VAULT
     private SharedPreferences hkElitePrefs;
 
     // 🛡️ THE ALPHA BRIDGE: Direct WebView to Native Hijack
@@ -54,17 +55,18 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void triggerGoogleLogin() {
+            // MANUAL TRIGGER ONLY
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
         }
 
-        // ⚡ [NEW] NATIVE LOGOUT DESTROYER
+        // ⚡ NATIVE LOGOUT DESTROYER
         @JavascriptInterface
         public void triggerGoogleLogout() {
             if (mGoogleSignInClient != null) {
-                mGoogleSignInClient.signOut(); // Kills Google Session
+                mGoogleSignInClient.signOut(); 
             }
-            hkElitePrefs.edit().clear().apply(); // Clears Native Vault
+            hkElitePrefs.edit().clear().apply(); 
             ((Activity)mContext).runOnUiThread(() -> {
                 Toast.makeText(mContext, "HK-SYSTEM: Native Session Destroyed", Toast.LENGTH_SHORT).show();
             });
@@ -94,11 +96,13 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
+    // --- UI SETUP: Modified Loading Screen ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
 
+        // 1. ORIGINAL HK LOGO (Blinking)
         ImageView logo = new ImageView(this);
         int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
         if (resId != 0) logo.setImageResource(resId);
@@ -110,15 +114,16 @@ public class MainActivity extends Activity {
         logoPulse.setRepeatCount(Animation.INFINITE);
         logo.startAnimation(logoPulse);
 
+        // 2. SMALL ORANGE DOT (Blinking Below Logo)
         hkDot = new View(this);
         GradientDrawable dotShape = new GradientDrawable();
         dotShape.setShape(GradientDrawable.OVAL);
-        dotShape.setColor(Color.parseColor("#FF8C00")); 
+        dotShape.setColor(Color.parseColor("#FF8C00")); // Dark Orange Emoji Color
         hkDot.setBackground(dotShape);
 
         int dotSize = 40; 
         LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-        dotParams.topMargin = 40; 
+        dotParams.topMargin = 40; // Space below logo
         hkDot.setLayoutParams(dotParams);
 
         AlphaAnimation dotPulse = new AlphaAnimation(1.0f, 0.3f); 
@@ -127,8 +132,27 @@ public class MainActivity extends Activity {
         dotPulse.setRepeatCount(Animation.INFINITE); 
         hkDot.startAnimation(dotPulse);
 
+        // 3. ⚡ [NEW] STABLE "HK Mall" TEXT (Below Orange Dot)
+        TextView stableText = new TextView(this);
+        stableText.setText("HK Mall");
+        stableText.setTextColor(Color.WHITE); // White Color
+        stableText.setGravity(Gravity.CENTER);
+        stableText.setTextSize(14f); // Adjustable text size
+        stableText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); // Tech Matrix look
+
+        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        textParams.topMargin = 20; // Small space below the orange dot
+        stableText.setLayoutParams(textParams);
+        // Do NOT apply animation to stableText - It remains stable.
+
+
+        // ADD ALL TO LOADER LAYOUT
         loaderLayout.addView(logo);
         loaderLayout.addView(hkDot);
+        loaderLayout.addView(stableText); // Stable text added last
         
         layout.addView(loaderLayout, new RelativeLayout.LayoutParams(-1, -1));
     }
@@ -198,19 +222,6 @@ public class MainActivity extends Activity {
                 loaderLayout.setVisibility(View.GONE);
                 hkView.setVisibility(View.VISIBLE);
                 CookieManager.getInstance().flush();
-
-                // ⚡ AUTO-LOGIN ENGINE
-                GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(MainActivity.this);
-                if (account != null && account.getIdToken() != null) {
-                    String savedToken = account.getIdToken();
-                    String autoLoginJs = "javascript:(function() { " +
-                            "if(window.handleAndroidLogin && !localStorage.getItem('hk_elite_user')) { " +
-                            "console.log('[HK-SYSTEM] AUTO-LOGIN EXECUTED'); " +
-                            "window.handleAndroidLogin('" + savedToken + "'); " +
-                            "} " +
-                            "})()";
-                    view.evaluateJavascript(autoLoginJs, null);
-                }
             }
             
             @Override
@@ -241,6 +252,7 @@ public class MainActivity extends Activity {
                             "})()";
                 hkView.evaluateJavascript(js, null);
 
+                // FORCE AUTOMATIC REFRESH
                 new Handler().postDelayed(() -> {
                     Toast.makeText(MainActivity.this, "Tech Wizard System Refreshing...", Toast.LENGTH_SHORT).show();
                     hkView.reload();
