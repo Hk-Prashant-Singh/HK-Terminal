@@ -85,30 +85,46 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- UI SETUP: Modified Loading Screen to small orange blinking dot ---
+    // --- UI SETUP: APK Logo + Small Orange Blinking Dot ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
 
-        hkDot = new View(this);
+        // 1. ORIGINAL HK LOGO (Blinking)
+        ImageView logo = new ImageView(this);
+        int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
+        if (resId != 0) logo.setImageResource(resId);
+        logo.setLayoutParams(new LinearLayout.LayoutParams(450, 450));
         
+        AlphaAnimation logoPulse = new AlphaAnimation(1.0f, 0.4f);
+        logoPulse.setDuration(800);
+        logoPulse.setRepeatMode(Animation.REVERSE);
+        logoPulse.setRepeatCount(Animation.INFINITE);
+        logo.startAnimation(logoPulse);
+
+        // 2. SMALL ORANGE DOT (Blinking Below Logo)
+        hkDot = new View(this);
         GradientDrawable dotShape = new GradientDrawable();
         dotShape.setShape(GradientDrawable.OVAL);
-        dotShape.setColor(Color.parseColor("#FF8C00")); // Dark Orange / Emoji Orange
+        dotShape.setColor(Color.parseColor("#FF8C00")); // Dark Orange Emoji Color
         hkDot.setBackground(dotShape);
 
         int dotSize = 40; // Small size like an emoji dot
         LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
+        dotParams.topMargin = 40; // Space between logo and dot
         hkDot.setLayoutParams(dotParams);
 
-        AlphaAnimation pulse = new AlphaAnimation(1.0f, 0.3f); 
-        pulse.setDuration(600); 
-        pulse.setRepeatMode(Animation.REVERSE); 
-        pulse.setRepeatCount(Animation.INFINITE); 
-        hkDot.startAnimation(pulse);
+        AlphaAnimation dotPulse = new AlphaAnimation(1.0f, 0.3f); 
+        dotPulse.setDuration(600); 
+        dotPulse.setRepeatMode(Animation.REVERSE); 
+        dotPulse.setRepeatCount(Animation.INFINITE); 
+        hkDot.startAnimation(dotPulse);
 
+        // ADD BOTH TO LOADER
+        loaderLayout.addView(logo);
         loaderLayout.addView(hkDot);
+        
         layout.addView(loaderLayout, new RelativeLayout.LayoutParams(-1, -1));
     }
 
