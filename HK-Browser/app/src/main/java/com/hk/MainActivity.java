@@ -137,7 +137,7 @@ public class MainActivity extends Activity {
 
         // 3. ⚡ [UPDATED] STABLE TEXT (Below Orange Dot)
         TextView stableText = new TextView(this);
-        stableText.setText("Riddhi Siddhi"); // Text is replaced as per Alpha Command
+        stableText.setText("Rs Mall"); // Text is replaced as per Alpha Command
         stableText.setTextColor(Color.WHITE); 
         stableText.setGravity(Gravity.CENTER);
         stableText.setTextSize(14f); 
