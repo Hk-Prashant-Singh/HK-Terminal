@@ -55,7 +55,10 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void triggerGoogleLogin() {
-            // MANUAL TRIGGER ONLY
+            // MANUAL TRIGGER ONLY - FORCE ACCOUNT PICKER
+            if (mGoogleSignInClient != null) {
+                mGoogleSignInClient.signOut(); // ⚡ System purane session ko kill karega taki har bar ID puche
+            }
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
         }
@@ -132,27 +135,25 @@ public class MainActivity extends Activity {
         dotPulse.setRepeatCount(Animation.INFINITE); 
         hkDot.startAnimation(dotPulse);
 
-        // 3. ⚡ [NEW] STABLE "HK Mall" TEXT (Below Orange Dot)
+        // 3. ⚡ [UPDATED] STABLE TEXT (Below Orange Dot)
         TextView stableText = new TextView(this);
-        stableText.setText("HK Mall");
-        stableText.setTextColor(Color.WHITE); // White Color
+        stableText.setText("Riddhi Siddhi"); // Text is replaced as per Alpha Command
+        stableText.setTextColor(Color.WHITE); 
         stableText.setGravity(Gravity.CENTER);
-        stableText.setTextSize(14f); // Adjustable text size
-        stableText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); // Tech Matrix look
+        stableText.setTextSize(14f); 
+        stableText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
 
         LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        textParams.topMargin = 20; // Small space below the orange dot
+        textParams.topMargin = 20; 
         stableText.setLayoutParams(textParams);
-        // Do NOT apply animation to stableText - It remains stable.
-
 
         // ADD ALL TO LOADER LAYOUT
         loaderLayout.addView(logo);
         loaderLayout.addView(hkDot);
-        loaderLayout.addView(stableText); // Stable text added last
+        loaderLayout.addView(stableText); 
         
         layout.addView(loaderLayout, new RelativeLayout.LayoutParams(-1, -1));
     }
@@ -161,6 +162,7 @@ public class MainActivity extends Activity {
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(WEB_CLIENT_ID)
                 .requestEmail()
+                .requestProfile() // System will explicitly ask for Profile info now
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
     }
@@ -191,7 +193,7 @@ public class MainActivity extends Activity {
             r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, url.substring(url.lastIndexOf("/") + 1));
             ((DownloadManager) getSystemService(DOWNLOAD_SERVICE)).enqueue(r);
-            Toast.makeText(this, "HK-MALL: Encrypted Download Started", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "RIDDHI SIDDHI: Encrypted Download Started", Toast.LENGTH_SHORT).show();
         });
 
         hkView.setWebChromeClient(new WebChromeClient() {
@@ -244,7 +246,7 @@ public class MainActivity extends Activity {
 
                 hkElitePrefs.edit().putString("SECURE_EMAIL", userEmail).putString("SECURE_TOKEN", idToken).apply();
 
-                Toast.makeText(this, "HK-MALL: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "RIDDHI SIDDHI: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
 
                 String js = "javascript:(function() { " +
                             "if(window.handleAndroidLogin) { window.handleAndroidLogin('" + idToken + "'); }" +
