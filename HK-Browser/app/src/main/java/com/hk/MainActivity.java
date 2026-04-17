@@ -236,3 +236,4 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() { if (hkView.canGoBack()) hkView.goBack(); else super.onBackPressed(); }
 }
+
