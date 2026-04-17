@@ -113,14 +113,21 @@ public class MainActivity extends Activity {
             loaderLayout.setBackgroundColor(Color.parseColor("#050505")); 
         }
 
-        // ⚡ ALPHA POSITIONING: Logo top pe shift hoga
+        // ⚡ ALPHA POSITIONING: Base layout ka padding lock
         loaderLayout.setPadding(0, 0, 0, 950); 
 
         // 1. MASTER HK LOGO
         ImageView logo = new ImageView(this);
         int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
         if (resId != 0) logo.setImageResource(resId);
-        logo.setLayoutParams(new LinearLayout.LayoutParams(450, 450));
+        
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(450, 450);
+        // ⚡ EXACT TARGETING: Sirf app icon ko upar push karne ke liye margin add kiya
+        logoParams.bottomMargin = 80; 
+        logo.setLayoutParams(logoParams);
+        
+        // ⚡ MASTER COMMAND: Visual translation ko -150f set kiya taki sirf logo 15% aur upar shift ho
+        logo.setTranslationY(-150f); 
         
         AlphaAnimation logoPulse = new AlphaAnimation(1.0f, 0.4f);
         logoPulse.setDuration(800);
@@ -128,7 +135,7 @@ public class MainActivity extends Activity {
         logoPulse.setRepeatCount(Animation.INFINITE);
         logo.startAnimation(logoPulse);
 
-        // 2. ORANGE DOT 🟠
+        // 2. ORANGE DOT 🟠 (Apni position par stable rahega)
         hkDot = new View(this);
         GradientDrawable dotShape = new GradientDrawable();
         dotShape.setShape(GradientDrawable.OVAL);
@@ -137,7 +144,7 @@ public class MainActivity extends Activity {
 
         int dotSize = 45; 
         LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-        dotParams.topMargin = 30; // ⚡ Position locked
+        dotParams.topMargin = 10; // ⚡ Dot locked securely 
         hkDot.setLayoutParams(dotParams);
 
         AlphaAnimation dotPulse = new AlphaAnimation(1.0f, 0.3f); 
@@ -145,8 +152,6 @@ public class MainActivity extends Activity {
         dotPulse.setRepeatMode(Animation.REVERSE); 
         dotPulse.setRepeatCount(Animation.INFINITE); 
         hkDot.startAnimation(dotPulse);
-
-        // Rs Mall text poori tarah removed
 
         loaderLayout.addView(logo);
         loaderLayout.addView(hkDot);
