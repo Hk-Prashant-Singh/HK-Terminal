@@ -99,11 +99,22 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- UI SETUP: Modified Loading Screen ---
+    // --- UI SETUP: Modified Loading Screen with Real Background ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
+
+        // ⚡ ALPHA COMMAND 1: Injecting hk_background.png as full background
+        int bgResId = getResources().getIdentifier("hk_background", "drawable", getPackageName());
+        if (bgResId != 0) {
+            loaderLayout.setBackgroundResource(bgResId);
+        } else {
+            loaderLayout.setBackgroundColor(Color.parseColor("#050505")); 
+        }
+
+        // ⚡ ALPHA COMMAND 2: Shifting the icon and elements upwards
+        loaderLayout.setPadding(0, 0, 0, 250); 
 
         // 1. ORIGINAL HK LOGO (Blinking)
         ImageView logo = new ImageView(this);
@@ -135,9 +146,9 @@ public class MainActivity extends Activity {
         dotPulse.setRepeatCount(Animation.INFINITE); 
         hkDot.startAnimation(dotPulse);
 
-        // 3. ⚡ [UPDATED] STABLE TEXT (Below Orange Dot)
+        // 3. STABLE TEXT (Below Orange Dot)
         TextView stableText = new TextView(this);
-        stableText.setText("Rs Mall"); // Text is replaced as per Alpha Command
+        stableText.setText("Rs Mall"); 
         stableText.setTextColor(Color.WHITE); 
         stableText.setGravity(Gravity.CENTER);
         stableText.setTextSize(14f); 
@@ -162,7 +173,7 @@ public class MainActivity extends Activity {
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(WEB_CLIENT_ID)
                 .requestEmail()
-                .requestProfile() // System will explicitly ask for Profile info now
+                .requestProfile() 
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
     }
