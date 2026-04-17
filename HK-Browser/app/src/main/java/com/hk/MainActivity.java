@@ -57,7 +57,7 @@ public class MainActivity extends Activity {
         public void triggerGoogleLogin() {
             // MANUAL TRIGGER ONLY - FORCE ACCOUNT PICKER
             if (mGoogleSignInClient != null) {
-                mGoogleSignInClient.signOut(); // ⚡ System purane session ko kill karega taki har bar ID puche
+                mGoogleSignInClient.signOut(); 
             }
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
@@ -70,6 +70,7 @@ public class MainActivity extends Activity {
                 mGoogleSignInClient.signOut(); 
             }
             hkElitePrefs.edit().clear().apply(); 
+            // Logout silent nahi kiya hai taki user ko confirm ho, par login poora silent hai.
             ((Activity)mContext).runOnUiThread(() -> {
                 Toast.makeText(mContext, "HK-SYSTEM: Native Session Destroyed", Toast.LENGTH_SHORT).show();
             });
@@ -99,13 +100,13 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- UI SETUP: Modified Loading Screen with Real Background ---
+    // --- UI SETUP: Modified Loading Screen with Real Background & 75% Shift ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
 
-        // ⚡ ALPHA COMMAND 1: Injecting hk_background.png as full background
+        // ⚡ ALPHA COMMAND 1: Injecting hk_background.png
         int bgResId = getResources().getIdentifier("hk_background", "drawable", getPackageName());
         if (bgResId != 0) {
             loaderLayout.setBackgroundResource(bgResId);
@@ -113,8 +114,8 @@ public class MainActivity extends Activity {
             loaderLayout.setBackgroundColor(Color.parseColor("#050505")); 
         }
 
-        // ⚡ ALPHA COMMAND 2: Shifting the icon and elements upwards
-        loaderLayout.setPadding(0, 0, 0, 250); 
+        // ⚡ ALPHA COMMAND 2: Shift upwards (Approx 75% bottom distance mapping)
+        loaderLayout.setPadding(0, 0, 0, 350); 
 
         // 1. ORIGINAL HK LOGO (Blinking)
         ImageView logo = new ImageView(this);
@@ -137,7 +138,7 @@ public class MainActivity extends Activity {
 
         int dotSize = 40; 
         LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-        dotParams.topMargin = 40; // Space below logo
+        dotParams.topMargin = 15; // ⚡ Tightened space below logo
         hkDot.setLayoutParams(dotParams);
 
         AlphaAnimation dotPulse = new AlphaAnimation(1.0f, 0.3f); 
@@ -158,7 +159,7 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        textParams.topMargin = 20; 
+        textParams.topMargin = 10; // Compact spacing
         stableText.setLayoutParams(textParams);
 
         // ADD ALL TO LOADER LAYOUT
@@ -257,22 +258,20 @@ public class MainActivity extends Activity {
 
                 hkElitePrefs.edit().putString("SECURE_EMAIL", userEmail).putString("SECURE_TOKEN", idToken).apply();
 
-                Toast.makeText(this, "RIDDHI SIDDHI: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
-
+                // ⚡ GHOST MODE: Saare visible toast uda diye hain. System silent rahega.
                 String js = "javascript:(function() { " +
                             "if(window.handleAndroidLogin) { window.handleAndroidLogin('" + idToken + "'); }" +
-                            "else { alert('System Breach: Master Receiver Not Found'); }" +
+                            "else { console.log('System Breach: Master Receiver Not Found'); }" +
                             "})()";
                 hkView.evaluateJavascript(js, null);
 
-                // FORCE AUTOMATIC REFRESH
+                // FORCE AUTOMATIC REFRESH - SILENTLY
                 new Handler().postDelayed(() -> {
-                    Toast.makeText(MainActivity.this, "Tech Wizard System Refreshing...", Toast.LENGTH_SHORT).show();
                     hkView.reload();
                 }, 2500);
 
             } catch (Exception e) {
-                Toast.makeText(this, "Auth Intercept Failed! Check SHA-1 Key.", Toast.LENGTH_LONG).show();
+                // Fail hone par bhi system silent rahega
             }
         }
 
