@@ -55,15 +55,13 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void triggerGoogleLogin() {
-            // MANUAL TRIGGER ONLY - FORCE ACCOUNT PICKER
             if (mGoogleSignInClient != null) {
-                mGoogleSignInClient.signOut(); // ⚡ System purane session ko kill karega
+                mGoogleSignInClient.signOut(); 
             }
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
         }
 
-        // ⚡ NATIVE LOGOUT DESTROYER
         @JavascriptInterface
         public void triggerGoogleLogout() {
             if (mGoogleSignInClient != null) {
@@ -99,13 +97,12 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- UI SETUP: Loading Screen (With Background & Top Shift) ---
+    // --- UI SETUP: Loading Screen ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
 
-        // Background logic
         int bgResId = getResources().getIdentifier("hk_background", "drawable", getPackageName());
         if (bgResId != 0) {
             loaderLayout.setBackgroundResource(bgResId);
@@ -122,11 +119,11 @@ public class MainActivity extends Activity {
         if (resId != 0) logo.setImageResource(resId);
         
         LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(450, 450);
-        // ⚡ EXACT TARGETING: Sirf app icon ko upar push karne ke liye margin add kiya
+        // ⚡ EXACT TARGETING: Sirf app icon ko upar push karne ke liye
         logoParams.bottomMargin = 80; 
         logo.setLayoutParams(logoParams);
         
-        // ⚡ MASTER COMMAND: Visual translation ko -150f set kiya taki sirf logo 15% aur upar shift ho
+        // ⚡ MASTER COMMAND: Logo 15% aur upar shift ho gaya
         logo.setTranslationY(-150f); 
         
         AlphaAnimation logoPulse = new AlphaAnimation(1.0f, 0.4f);
@@ -135,16 +132,16 @@ public class MainActivity extends Activity {
         logoPulse.setRepeatCount(Animation.INFINITE);
         logo.startAnimation(logoPulse);
 
-        // 2. ORANGE DOT 🟠 (Apni position par stable rahega)
+        // 2. ORANGE DOT 🟠
         hkDot = new View(this);
         GradientDrawable dotShape = new GradientDrawable();
         dotShape.setShape(GradientDrawable.OVAL);
-        dotShape.setColor(Color.parseColor("#FF6F00")); // Hard Neon Orange
+        dotShape.setColor(Color.parseColor("#FF6F00")); 
         hkDot.setBackground(dotShape);
 
         int dotSize = 45; 
         LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-        dotParams.topMargin = 10; // ⚡ Dot locked securely 
+        dotParams.topMargin = 10; 
         hkDot.setLayoutParams(dotParams);
 
         AlphaAnimation dotPulse = new AlphaAnimation(1.0f, 0.3f); 
@@ -216,9 +213,11 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                // ⚡ Har baar refresh/load hone pe ye loader screen aayegi
-                loaderLayout.setVisibility(View.VISIBLE);
-                hkView.setVisibility(View.GONE);
+                // Ignore about:blank so the loader doesn't flash when network dies
+                if(!url.equals("about:blank")) {
+                    loaderLayout.setVisibility(View.VISIBLE);
+                    hkView.setVisibility(View.GONE);
+                }
             }
 
             @Override
@@ -230,7 +229,10 @@ public class MainActivity extends Activity {
             
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) { view.loadUrl("about:blank"); showNoInternetPopUp(); }
+                if (request.isForMainFrame()) { 
+                    view.loadUrl("about:blank"); 
+                    showNoInternetPopUp(); 
+                }
             }
         });
     }
@@ -255,13 +257,13 @@ public class MainActivity extends Activity {
                             "})()";
                 hkView.evaluateJavascript(js, null);
 
-                // FORCE AUTOMATIC REFRESH - SILENTLY
+                // FORCE AUTOMATIC REFRESH - SILENTLY (Using loadUrl TARGET_URL to prevent blank bugs)
                 new Handler().postDelayed(() -> {
-                    hkView.reload();
+                    hkView.loadUrl(TARGET_URL);
                 }, 2500);
 
             } catch (Exception e) {
-                // Fail hone par bhi system silent rahega
+                // Silent Fail
             }
         }
 
@@ -278,8 +280,11 @@ public class MainActivity extends Activity {
                 @Override
                 public void onAvailable(Network network) {
                     runOnUiThread(() -> {
-                        if (internetDialog != null) internetDialog.dismiss();
-                        hkView.reload();
+                        if (internetDialog != null && internetDialog.isShowing()) {
+                            internetDialog.dismiss();
+                        }
+                        // ⚡ MASTER FIX: System seedha TARGET_URL load karega, taaki black screen destroy ho jaye
+                        hkView.loadUrl(TARGET_URL);
                     });
                 }
             });
@@ -288,31 +293,62 @@ public class MainActivity extends Activity {
 
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
+        
         LinearLayout dLayout = new LinearLayout(this);
         dLayout.setOrientation(LinearLayout.VERTICAL);
-        dLayout.setBackgroundColor(Color.parseColor("#002200")); 
+        // Deep dark military green/black theme for breach
+        dLayout.setBackgroundColor(Color.parseColor("#0A150A")); 
         dLayout.setPadding(60, 80, 60, 80);
         dLayout.setGravity(Gravity.CENTER);
         
+        // Title text
         TextView title = new TextView(this);
         title.setText("NETWORK BREACH ⚡");
-        title.setTextColor(Color.WHITE);
+        title.setTextColor(Color.parseColor("#FFD700")); // Yellow Warning Lightning
         title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        title.setTextSize(18f);
         
+        // ⚡ Naya comment: NO NETWORK DETECTED
+        TextView subTitle = new TextView(this);
+        subTitle.setText("NO NETWORK DETECTED");
+        subTitle.setTextColor(Color.WHITE);
+        subTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        subTitle.setPadding(0, 15, 0, 40);
+        subTitle.setGravity(Gravity.CENTER);
+        
+        // Button update: FORCE REFRESH
         TextView retryBtn = new TextView(this);
-        retryBtn.setText(" FORCE RECONNECT ");
+        retryBtn.setText(" FORCE REFRESH ");
         retryBtn.setPadding(40, 35, 40, 35);
-        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); 
+        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); // Aggressive Red
         retryBtn.setTextColor(Color.WHITE);
+        retryBtn.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         
-        retryBtn.setOnClickListener(v -> { hkView.loadUrl(TARGET_URL); if (internetDialog != null) internetDialog.dismiss(); });
+        retryBtn.setOnClickListener(v -> { 
+            if (internetDialog != null) internetDialog.dismiss();
+            // ⚡ MASTER FIX: Click hone pe direct Target URL load hoga
+            hkView.loadUrl(TARGET_URL); 
+        });
         
         dLayout.addView(title);
+        dLayout.addView(subTitle);
         dLayout.addView(retryBtn);
         
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        // Custom dark stroke/border
+        GradientDrawable border = new GradientDrawable();
+        border.setColor(Color.parseColor("#050505"));
+        border.setStroke(3, Color.parseColor("#333333"));
+        dLayout.setBackground(border);
+
         builder.setView(dLayout).setCancelable(false);
         internetDialog = builder.create();
+        
+        // Removing default alert dialog background to show custom dark layout perfectly
+        if(internetDialog.getWindow() != null) {
+            internetDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        
         internetDialog.show();
     }
 
@@ -320,4 +356,4 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (hkView.canGoBack()) hkView.goBack(); else super.onBackPressed();
     }
-}
+    }
