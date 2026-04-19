@@ -76,19 +76,52 @@ public class MainActivity extends Activity {
             });
         }
 
-        // ⚡ [HK-OPERATION] NATIVE VOICE ENGINE (Kept for fallback, but your website will now use its own UI)
+        // ⚡ [HK-OPERATION] NATIVE SILENT VOICE ENGINE (NO POPUP)
         @JavascriptInterface
-        public void triggerVoiceSearch() {
+        public void startSilentVoiceEngine() {
             ((Activity)mContext).runOnUiThread(() -> {
+                
+                android.speech.SpeechRecognizer silentRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(mContext);
                 Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "en-IN");
-                intent.putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Tech Wizard System Listening...");
-                try {
-                    ((Activity)mContext).startActivityForResult(intent, RC_VOICE);
-                } catch (Exception e) {
-                    Toast.makeText(mContext, "Voice Engine Disabled on Device!", Toast.LENGTH_SHORT).show();
-                }
+
+                silentRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
+                    @Override
+                    public void onReadyForSpeech(Bundle params) {}
+                    @Override
+                    public void onBeginningOfSpeech() {}
+                    @Override
+                    public void onRmsChanged(float rmsdB) {}
+                    @Override
+                    public void onBufferReceived(byte[] buffer) {}
+                    @Override
+                    public void onEndOfSpeech() {}
+                    @Override
+                    public void onError(int error) {
+                        // Agar koi error aaye toh JS ko bata de
+                        hkView.evaluateJavascript("javascript:document.getElementById('voice-result-text').innerText='System Error...';", null);
+                    }
+
+                    @Override
+                    public void onResults(Bundle results) {
+                        java.util.ArrayList<String> data = results.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
+                        if (data != null && !data.isEmpty()) {
+                            String command = data.get(0).replace("'", "\\'");
+                            // ⚡ RESULT DIRECT WEBSITE KE SEARCH BAR MEIN INJECT KARO
+                            hkView.evaluateJavascript("javascript:processEliteVoiceCommand('" + command + "');", null);
+                        }
+                        silentRecognizer.destroy(); // Memory clear
+                    }
+
+                    @Override
+                    public void onPartialResults(Bundle partialResults) {}
+                    @Override
+                    public void onEvent(int eventType, Bundle params) {}
+                });
+
+                // System bina kisi popup ke sunna shuru karega
+                silentRecognizer.startListening(intent);
             });
         }
     }
@@ -97,7 +130,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // ⚡ [HK-OPERATION] RUNTIME MIC PERMISSION (Required for custom Web UI)
+        // ⚡ [HK-OPERATION] RUNTIME MIC PERMISSION
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 101);
@@ -194,7 +227,6 @@ public class MainActivity extends Activity {
         settings.setGeolocationEnabled(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // ⚡ MEDIA PLAYBACK REQUIRES NO GESTURE FOR AUTO-MIC ACCESS
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             settings.setMediaPlaybackRequiresUserGesture(false);
         }
@@ -226,12 +258,10 @@ public class MainActivity extends Activity {
                 return true;
             }
 
-            // ⚡ [HK-OPERATION] WEB UI MIC ACCESS ALLOWED
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
-                    // System teri custom website ko direct hardware mic access grant kar dega
                     request.grant(request.getResources());
                 });
             }
@@ -311,15 +341,14 @@ public class MainActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        // Backup fallback voice logic just in case
         if (requestCode == RC_VOICE && resultCode == RESULT_OK && data != null) {
             java.util.ArrayList<String> result = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
             if (result != null && !result.isEmpty()) {
                 String spokenText = result.get(0).replace("'", "\\'"); 
                 String js = "javascript:(function() { " +
-                            "var searchBar = document.getElementById('hk-search-bar');" +
-                            "if(searchBar) {" +
-                            "    searchBar.value = '" + spokenText + "';" +
-                            "    searchBar.dispatchEvent(new Event('input', { bubbles: true }));" +
+                            "if(typeof processEliteVoiceCommand === 'function') {" +
+                            "    processEliteVoiceCommand('" + spokenText + "');" +
                             "}" +
                             "})()";
                 hkView.evaluateJavascript(js, null);
@@ -346,7 +375,7 @@ public class MainActivity extends Activity {
                 }, 2500);
 
             } catch (Exception e) {
-                // Silent failure maintained
+                // Silent fail
             }
         }
 
