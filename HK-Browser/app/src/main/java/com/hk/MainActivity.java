@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
     private static final int RC_SIGN_IN = 9001;
     private static final int REQUEST_SELECT_FILE = 100;
     
-    // ⚡ [HK-OPERATION] ELITE VOICE ENGINE ID (Extracted from your new logic)
+    // ⚡ [HK-OPERATION] ELITE VOICE ENGINE ID
     private static final int RC_VOICE = 9002; 
 
     private WebView hkView;
@@ -76,7 +76,7 @@ public class MainActivity extends Activity {
             });
         }
 
-        // ⚡ [HK-OPERATION] NATIVE VOICE ENGINE HIJACK
+        // ⚡ [HK-OPERATION] NATIVE VOICE ENGINE (Kept for fallback, but your website will now use its own UI)
         @JavascriptInterface
         public void triggerVoiceSearch() {
             ((Activity)mContext).runOnUiThread(() -> {
@@ -97,6 +97,13 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // ⚡ [HK-OPERATION] RUNTIME MIC PERMISSION (Required for custom Web UI)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 101);
+            }
+        }
+
         hkElitePrefs = getSharedPreferences("HK_ELITE_VAULT", MODE_PRIVATE);
 
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
@@ -116,7 +123,6 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- UI SETUP: Modified Loading Screen with Real Background & 15% Top Shift ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
@@ -129,10 +135,8 @@ public class MainActivity extends Activity {
             loaderLayout.setBackgroundColor(Color.parseColor("#050505")); 
         }
 
-        // ⚡ ALPHA POSITIONING
         loaderLayout.setPadding(0, 0, 0, 950); 
 
-        // 1. MASTER HK LOGO (Sky High Shift)
         ImageView logo = new ImageView(this);
         int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
         if (resId != 0) logo.setImageResource(resId);
@@ -140,8 +144,6 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(450, 450);
         logoParams.bottomMargin = 80; 
         logo.setLayoutParams(logoParams);
-        
-        // ⚡ Logo 15% aur upar shift 
         logo.setTranslationY(-150f); 
         
         AlphaAnimation logoPulse = new AlphaAnimation(1.0f, 0.4f);
@@ -150,7 +152,6 @@ public class MainActivity extends Activity {
         logoPulse.setRepeatCount(Animation.INFINITE);
         logo.startAnimation(logoPulse);
 
-        // 2. ORANGE DOT 🟠
         hkDot = new View(this);
         GradientDrawable dotShape = new GradientDrawable();
         dotShape.setShape(GradientDrawable.OVAL);
@@ -193,6 +194,11 @@ public class MainActivity extends Activity {
         settings.setGeolocationEnabled(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
+        // ⚡ MEDIA PLAYBACK REQUIRES NO GESTURE FOR AUTO-MIC ACCESS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            settings.setMediaPlaybackRequiresUserGesture(false);
+        }
+        
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
         settings.setSupportMultipleWindows(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -219,11 +225,20 @@ public class MainActivity extends Activity {
                 startActivityForResult(fileChooserParams.createIntent(), REQUEST_SELECT_FILE);
                 return true;
             }
+
+            // ⚡ [HK-OPERATION] WEB UI MIC ACCESS ALLOWED
+            @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(() -> {
+                    // System teri custom website ko direct hardware mic access grant kar dega
+                    request.grant(request.getResources());
+                });
+            }
         });
 
         hkView.setWebViewClient(new WebViewClient() {
             
-            // ⚡ [HK-OPERATION] SMART INTENT ROUTER (NEW ANDROID API 24+)
             @TargetApi(Build.VERSION_CODES.N)
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -231,16 +246,13 @@ public class MainActivity extends Activity {
                 return handleEliteUrlOverrides(view, url);
             }
 
-            // ⚡ [HK-OPERATION] FOR OLDER ANDROID
             @SuppressWarnings("deprecation")
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 return handleEliteUrlOverrides(view, url);
             }
 
-            // ⚡ CENTRALIZED DIALER/APP ROUTER (Extracted from your code)
             private boolean handleEliteUrlOverrides(WebView view, String url) {
-                // 📞 Force Dialer (Calling)
                 if (url.startsWith("tel:")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
@@ -250,7 +262,6 @@ public class MainActivity extends Activity {
                     }
                     return true;
                 }
-                // 🟢 WhatsApp & Email
                 if (url.startsWith("whatsapp:") || url.startsWith("mailto:")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
@@ -260,7 +271,6 @@ public class MainActivity extends Activity {
                     }
                     return true;
                 }
-
                 if (url.startsWith("intent://")) { return true; } 
                 view.loadUrl(url);
                 return true;
@@ -268,7 +278,6 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                // Ignore about:blank so loader doesn't flash when network dies
                 if(!url.equals("about:blank")) {
                     loaderLayout.setVisibility(View.VISIBLE);
                     hkView.setVisibility(View.GONE);
@@ -284,14 +293,12 @@ public class MainActivity extends Activity {
             
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                // ⚡ [HK-OPERATION] NETWORK BREACH BYPASS FOR DIALER (Merged perfectly)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     String url = request.getUrl().toString();
                     if (url.startsWith("tel:") || url.startsWith("whatsapp:") || url.startsWith("mailto:")) {
-                        return; // Ignore crash for calling protocols
+                        return; 
                     }
                 }
-                
                 if (request.isForMainFrame()) { 
                     view.loadUrl("about:blank"); 
                     showNoInternetPopUp(); 
@@ -304,7 +311,6 @@ public class MainActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // ⚡ [HK-OPERATION] CAPTURE VOICE RESULT AND SEND TO HTML
         if (requestCode == RC_VOICE && resultCode == RESULT_OK && data != null) {
             java.util.ArrayList<String> result = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
             if (result != null && !result.isEmpty()) {
@@ -329,14 +335,12 @@ public class MainActivity extends Activity {
 
                 hkElitePrefs.edit().putString("SECURE_EMAIL", userEmail).putString("SECURE_TOKEN", idToken).apply();
 
-                // ⚡ GHOST MODE (Pichla fix barkarar - No Toast alerts during login)
                 String js = "javascript:(function() { " +
                             "if(window.handleAndroidLogin) { window.handleAndroidLogin('" + idToken + "'); }" +
                             "else { console.log('System Breach: Master Receiver Not Found'); }" +
                             "})()";
                 hkView.evaluateJavascript(js, null);
 
-                // FORCE AUTOMATIC REFRESH - SILENTLY (Black screen fix wala URL load)
                 new Handler().postDelayed(() -> {
                     hkView.loadUrl(TARGET_URL);
                 }, 2500);
@@ -362,7 +366,6 @@ public class MainActivity extends Activity {
                         if (internetDialog != null && internetDialog.isShowing()) {
                             internetDialog.dismiss();
                         }
-                        // Black screen fix lock barkarar
                         hkView.loadUrl(TARGET_URL);
                     });
                 }
