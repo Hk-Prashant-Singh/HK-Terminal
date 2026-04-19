@@ -1,5 +1,6 @@
 package com.hk;
 
+import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -7,6 +8,7 @@ import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -18,6 +20,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -38,58 +43,48 @@ public class MainActivity extends Activity {
     private static final int RC_SIGN_IN = 9001;
     private static final int REQUEST_SELECT_FILE = 100;
     
-    // ⚡ [HK-OPERATION] ELITE VOICE ENGINE ID
-    private static final int RC_VOICE = 9002; 
-
     private WebView hkView;
     private LinearLayout loaderLayout;
     private View hkDot; 
     private AlertDialog internetDialog;
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
-    
-    //    HK NATIVE VAULT
     private SharedPreferences hkElitePrefs;
 
-    //    THE ALPHA BRIDGE: Direct WebView to Native Hijack
+    // ⚡ [HK-OPERATION] GHOST VOICE ENGINE (BACKGROUND)
+    private SpeechRecognizer mSpeechRecognizer;
+    private Intent mSpeechIntent;
+
     public class WebAppInterface {
         Context mContext;
         WebAppInterface(Context c) { mContext = c; }
 
         @JavascriptInterface
         public void triggerGoogleLogin() {
-            // MANUAL TRIGGER ONLY - FORCE ACCOUNT PICKER
             if (mGoogleSignInClient != null) {
-                mGoogleSignInClient.signOut(); //   System purane session ko kill karega taki har bar ID puche
+                mGoogleSignInClient.signOut(); 
             }
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
         }
 
-        //   NATIVE LOGOUT DESTROYER
         @JavascriptInterface
         public void triggerGoogleLogout() {
-            if (mGoogleSignInClient != null) {
-                mGoogleSignInClient.signOut(); 
-            }
+            if (mGoogleSignInClient != null) mGoogleSignInClient.signOut(); 
             hkElitePrefs.edit().clear().apply(); 
             ((Activity)mContext).runOnUiThread(() -> {
                 Toast.makeText(mContext, "HK-SYSTEM: Native Session Destroyed", Toast.LENGTH_SHORT).show();
             });
         }
 
-        // ⚡ [HK-OPERATION] NATIVE VOICE ENGINE HIJACK
+        // ⚡ BACKGROUND SILENT TRIGGER (No Google Dialog Popup)
         @JavascriptInterface
         public void triggerVoiceSearch() {
             ((Activity)mContext).runOnUiThread(() -> {
-                Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "en-IN");
-                intent.putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Tech Wizard System Listening...");
-                try {
-                    ((Activity)mContext).startActivityForResult(intent, RC_VOICE);
-                } catch (Exception e) {
-                    Toast.makeText(mContext, "Voice Engine Disabled on Device!", Toast.LENGTH_SHORT).show();
+                if (mSpeechRecognizer != null) {
+                    mSpeechRecognizer.startListening(mSpeechIntent);
+                } else {
+                    Toast.makeText(mContext, "Voice Engine Not Initialized!", Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -98,6 +93,13 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // ⚡ RUNTIME MIC PERMISSION CHECK
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 101);
+            }
+        }
 
         hkElitePrefs = getSharedPreferences("HK_ELITE_VAULT", MODE_PRIVATE);
 
@@ -114,17 +116,63 @@ public class MainActivity extends Activity {
         setupWebSettings();
         setupHandlers();
         setupNetwork();
+        setupGhostVoiceEngine(); // ⚡ INIT GHOST ENGINE
 
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- UI SETUP: Modified Loading Screen with Real Background ---
+    // ⚡ [HK-OPERATION] SILENT SPEECH RECOGNIZER LOGIC
+    private void setupGhostVoiceEngine() {
+        mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        mSpeechIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        mSpeechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        mSpeechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-IN");
+
+        mSpeechRecognizer.setRecognitionListener(new RecognitionListener() {
+            @Override
+            public void onReadyForSpeech(Bundle params) {
+                hkView.evaluateJavascript("javascript:if(window.onNativeVoiceReady) window.onNativeVoiceReady();", null);
+            }
+            @Override
+            public void onBeginningOfSpeech() {}
+            @Override
+            public void onRmsChanged(float rmsdB) {}
+            @Override
+            public void onBufferReceived(byte[] buffer) {}
+            @Override
+            public void onEndOfSpeech() {}
+            @Override
+            public void onError(int error) {
+                hkView.evaluateJavascript("javascript:if(window.onNativeVoiceError) window.onNativeVoiceError(" + error + ");", null);
+            }
+            @Override
+            public void onResults(Bundle results) {
+                java.util.ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                if (matches != null && !matches.isEmpty()) {
+                    String spokenText = matches.get(0).replace("'", "\\'"); 
+                    String js = "javascript:(function() { " +
+                                "var searchBar = document.getElementById('hk-search-bar');" +
+                                "if(searchBar) {" +
+                                "    searchBar.value = '" + spokenText + "';" +
+                                "    searchBar.dispatchEvent(new Event('input', { bubbles: true }));" +
+                                "}" +
+                                "if(window.stopEliteVoiceSearch) window.stopEliteVoiceSearch();" +
+                                "})()";
+                    hkView.evaluateJavascript(js, null);
+                }
+            }
+            @Override
+            public void onPartialResults(Bundle partialResults) {}
+            @Override
+            public void onEvent(int eventType, Bundle params) {}
+        });
+    }
+
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
 
-        //   ALPHA COMMAND 1: Injecting hk_background.png as full background
         int bgResId = getResources().getIdentifier("hk_background", "drawable", getPackageName());
         if (bgResId != 0) {
             loaderLayout.setBackgroundResource(bgResId);
@@ -132,10 +180,8 @@ public class MainActivity extends Activity {
             loaderLayout.setBackgroundColor(Color.parseColor("#050505")); 
         }
 
-        //   ALPHA COMMAND 2: Shifting the icon and elements upwards
         loaderLayout.setPadding(0, 0, 0, 250); 
 
-        // 1. ORIGINAL HK LOGO (Blinking)
         ImageView logo = new ImageView(this);
         int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
         if (resId != 0) logo.setImageResource(resId);
@@ -147,16 +193,15 @@ public class MainActivity extends Activity {
         logoPulse.setRepeatCount(Animation.INFINITE);
         logo.startAnimation(logoPulse);
 
-        // 2. SMALL ORANGE DOT (Blinking Below Logo)
         hkDot = new View(this);
         GradientDrawable dotShape = new GradientDrawable();
         dotShape.setShape(GradientDrawable.OVAL);
-        dotShape.setColor(Color.parseColor("#FF8C00")); // Dark Orange Emoji Color
+        dotShape.setColor(Color.parseColor("#FF8C00")); 
         hkDot.setBackground(dotShape);
 
         int dotSize = 40; 
         LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-        dotParams.topMargin = 40; // Space below logo
+        dotParams.topMargin = 40; 
         hkDot.setLayoutParams(dotParams);
 
         AlphaAnimation dotPulse = new AlphaAnimation(1.0f, 0.3f); 
@@ -165,7 +210,6 @@ public class MainActivity extends Activity {
         dotPulse.setRepeatCount(Animation.INFINITE); 
         hkDot.startAnimation(dotPulse);
 
-        // 3. STABLE TEXT (Below Orange Dot)
         TextView stableText = new TextView(this);
         stableText.setText("Rs Mall"); 
         stableText.setTextColor(Color.WHITE); 
@@ -180,7 +224,6 @@ public class MainActivity extends Activity {
         textParams.topMargin = 20; 
         stableText.setLayoutParams(textParams);
 
-        // ADD ALL TO LOADER LAYOUT
         loaderLayout.addView(logo);
         loaderLayout.addView(hkDot);
         loaderLayout.addView(stableText); 
@@ -236,19 +279,37 @@ public class MainActivity extends Activity {
         });
 
         hkView.setWebViewClient(new WebViewClient() {
+            @TargetApi(Build.VERSION_CODES.N)
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return handleEliteUrlOverrides(view, request.getUrl().toString());
+            }
+
+            @SuppressWarnings("deprecation")
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // ⚡ [HK-OPERATION] SMART INTENT ROUTER (Dialer, WhatsApp, Email Fix)
-                if (url.startsWith("tel:") || url.startsWith("whatsapp:") || url.startsWith("mailto:")) {
+                return handleEliteUrlOverrides(view, url);
+            }
+
+            private boolean handleEliteUrlOverrides(WebView view, String url) {
+                if (url.startsWith("tel:")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "Dialer missing!", Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                }
+                if (url.startsWith("whatsapp:") || url.startsWith("mailto:")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                         startActivity(intent);
                     } catch (Exception e) {
-                        Toast.makeText(MainActivity.this, "App not found for this action!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "App not found!", Toast.LENGTH_SHORT).show();
                     }
                     return true;
                 }
-
                 if (url.startsWith("intent://")) { return true; } 
                 view.loadUrl(url);
                 return true;
@@ -269,6 +330,12 @@ public class MainActivity extends Activity {
             
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    String url = request.getUrl().toString();
+                    if (url.startsWith("tel:") || url.startsWith("whatsapp:") || url.startsWith("mailto:")) {
+                        return; 
+                    }
+                }
                 if (request.isForMainFrame()) { view.loadUrl("about:blank"); showNoInternetPopUp(); }
             }
         });
@@ -278,22 +345,6 @@ public class MainActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // ⚡ [HK-OPERATION] CAPTURE VOICE RESULT AND SEND TO HTML
-        if (requestCode == RC_VOICE && resultCode == RESULT_OK && data != null) {
-            java.util.ArrayList<String> result = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
-            if (result != null && !result.isEmpty()) {
-                String spokenText = result.get(0).replace("'", "\\'"); 
-                String js = "javascript:(function() { " +
-                            "var searchBar = document.getElementById('hk-search-bar');" +
-                            "if(searchBar) {" +
-                            "    searchBar.value = '" + spokenText + "';" +
-                            "    searchBar.dispatchEvent(new Event('input', { bubbles: true }));" +
-                            "}" +
-                            "})()";
-                hkView.evaluateJavascript(js, null);
-            }
-        }
-
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
@@ -302,7 +353,6 @@ public class MainActivity extends Activity {
                 String userEmail = account.getEmail();
 
                 hkElitePrefs.edit().putString("SECURE_EMAIL", userEmail).putString("SECURE_TOKEN", idToken).apply();
-
                 Toast.makeText(this, "RIDDHI SIDDHI: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
 
                 String js = "javascript:(function() { " +
@@ -311,7 +361,6 @@ public class MainActivity extends Activity {
                             "})()";
                 hkView.evaluateJavascript(js, null);
 
-                // FORCE AUTOMATIC REFRESH
                 new Handler().postDelayed(() -> {
                     Toast.makeText(MainActivity.this, "Tech Wizard System Refreshing...", Toast.LENGTH_SHORT).show();
                     hkView.reload();
