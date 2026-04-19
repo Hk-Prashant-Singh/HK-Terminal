@@ -37,6 +37,9 @@ public class MainActivity extends Activity {
     private static final String WEB_CLIENT_ID = "172778880682-t1ucts0ar6lqrl0klnkv2620nf46ukbv.apps.googleusercontent.com";
     private static final int RC_SIGN_IN = 9001;
     private static final int REQUEST_SELECT_FILE = 100;
+    
+    // ⚡ [HK-OPERATION] ELITE VOICE ENGINE ID
+    private static final int RC_VOICE = 9002; 
 
     private WebView hkView;
     private LinearLayout loaderLayout;
@@ -45,23 +48,25 @@ public class MainActivity extends Activity {
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
     
-    // 🛡️ HK NATIVE VAULT
+    //    HK NATIVE VAULT
     private SharedPreferences hkElitePrefs;
 
-    // 🛡️ THE ALPHA BRIDGE: Direct WebView to Native Hijack
+    //    THE ALPHA BRIDGE: Direct WebView to Native Hijack
     public class WebAppInterface {
         Context mContext;
         WebAppInterface(Context c) { mContext = c; }
 
         @JavascriptInterface
         public void triggerGoogleLogin() {
+            // MANUAL TRIGGER ONLY - FORCE ACCOUNT PICKER
             if (mGoogleSignInClient != null) {
-                mGoogleSignInClient.signOut(); 
+                mGoogleSignInClient.signOut(); //   System purane session ko kill karega taki har bar ID puche
             }
             Intent signInIntent = mGoogleSignInClient.getSignInIntent();
             ((Activity)mContext).startActivityForResult(signInIntent, RC_SIGN_IN);
         }
 
+        //   NATIVE LOGOUT DESTROYER
         @JavascriptInterface
         public void triggerGoogleLogout() {
             if (mGoogleSignInClient != null) {
@@ -70,6 +75,22 @@ public class MainActivity extends Activity {
             hkElitePrefs.edit().clear().apply(); 
             ((Activity)mContext).runOnUiThread(() -> {
                 Toast.makeText(mContext, "HK-SYSTEM: Native Session Destroyed", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // ⚡ [HK-OPERATION] NATIVE VOICE ENGINE HIJACK
+        @JavascriptInterface
+        public void triggerVoiceSearch() {
+            ((Activity)mContext).runOnUiThread(() -> {
+                Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "en-IN");
+                intent.putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Tech Wizard System Listening...");
+                try {
+                    ((Activity)mContext).startActivityForResult(intent, RC_VOICE);
+                } catch (Exception e) {
+                    Toast.makeText(mContext, "Voice Engine Disabled on Device!", Toast.LENGTH_SHORT).show();
+                }
             });
         }
     }
@@ -97,12 +118,13 @@ public class MainActivity extends Activity {
         hkView.loadUrl(TARGET_URL);
     }
 
-    // --- UI SETUP: Loading Screen ---
+    // --- UI SETUP: Modified Loading Screen with Real Background ---
     private void setupLoader(RelativeLayout layout) {
         loaderLayout = new LinearLayout(this);
         loaderLayout.setOrientation(LinearLayout.VERTICAL);
         loaderLayout.setGravity(Gravity.CENTER);
 
+        //   ALPHA COMMAND 1: Injecting hk_background.png as full background
         int bgResId = getResources().getIdentifier("hk_background", "drawable", getPackageName());
         if (bgResId != 0) {
             loaderLayout.setBackgroundResource(bgResId);
@@ -110,21 +132,14 @@ public class MainActivity extends Activity {
             loaderLayout.setBackgroundColor(Color.parseColor("#050505")); 
         }
 
-        // ⚡ ALPHA POSITIONING: Base layout ka padding lock
-        loaderLayout.setPadding(0, 0, 0, 950); 
+        //   ALPHA COMMAND 2: Shifting the icon and elements upwards
+        loaderLayout.setPadding(0, 0, 0, 250); 
 
-        // 1. MASTER HK LOGO
+        // 1. ORIGINAL HK LOGO (Blinking)
         ImageView logo = new ImageView(this);
         int resId = getResources().getIdentifier("hk_logo", "drawable", getPackageName());
         if (resId != 0) logo.setImageResource(resId);
-        
-        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(450, 450);
-        // ⚡ EXACT TARGETING: Sirf app icon ko upar push karne ke liye
-        logoParams.bottomMargin = 80; 
-        logo.setLayoutParams(logoParams);
-        
-        // ⚡ MASTER COMMAND: Logo 15% aur upar shift ho gaya
-        logo.setTranslationY(-150f); 
+        logo.setLayoutParams(new LinearLayout.LayoutParams(450, 450));
         
         AlphaAnimation logoPulse = new AlphaAnimation(1.0f, 0.4f);
         logoPulse.setDuration(800);
@@ -132,16 +147,16 @@ public class MainActivity extends Activity {
         logoPulse.setRepeatCount(Animation.INFINITE);
         logo.startAnimation(logoPulse);
 
-        // 2. ORANGE DOT 🟠
+        // 2. SMALL ORANGE DOT (Blinking Below Logo)
         hkDot = new View(this);
         GradientDrawable dotShape = new GradientDrawable();
         dotShape.setShape(GradientDrawable.OVAL);
-        dotShape.setColor(Color.parseColor("#FF6F00")); 
+        dotShape.setColor(Color.parseColor("#FF8C00")); // Dark Orange Emoji Color
         hkDot.setBackground(dotShape);
 
-        int dotSize = 45; 
+        int dotSize = 40; 
         LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-        dotParams.topMargin = 10; 
+        dotParams.topMargin = 40; // Space below logo
         hkDot.setLayoutParams(dotParams);
 
         AlphaAnimation dotPulse = new AlphaAnimation(1.0f, 0.3f); 
@@ -150,8 +165,25 @@ public class MainActivity extends Activity {
         dotPulse.setRepeatCount(Animation.INFINITE); 
         hkDot.startAnimation(dotPulse);
 
+        // 3. STABLE TEXT (Below Orange Dot)
+        TextView stableText = new TextView(this);
+        stableText.setText("Rs Mall"); 
+        stableText.setTextColor(Color.WHITE); 
+        stableText.setGravity(Gravity.CENTER);
+        stableText.setTextSize(14f); 
+        stableText.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
+
+        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        textParams.topMargin = 20; 
+        stableText.setLayoutParams(textParams);
+
+        // ADD ALL TO LOADER LAYOUT
         loaderLayout.addView(logo);
         loaderLayout.addView(hkDot);
+        loaderLayout.addView(stableText); 
         
         layout.addView(loaderLayout, new RelativeLayout.LayoutParams(-1, -1));
     }
@@ -206,6 +238,17 @@ public class MainActivity extends Activity {
         hkView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                // ⚡ [HK-OPERATION] SMART INTENT ROUTER (Dialer, WhatsApp, Email Fix)
+                if (url.startsWith("tel:") || url.startsWith("whatsapp:") || url.startsWith("mailto:")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "App not found for this action!", Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                }
+
                 if (url.startsWith("intent://")) { return true; } 
                 view.loadUrl(url);
                 return true;
@@ -213,11 +256,8 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                // Ignore about:blank so the loader doesn't flash when network dies
-                if(!url.equals("about:blank")) {
-                    loaderLayout.setVisibility(View.VISIBLE);
-                    hkView.setVisibility(View.GONE);
-                }
+                loaderLayout.setVisibility(View.VISIBLE);
+                hkView.setVisibility(View.GONE);
             }
 
             @Override
@@ -229,10 +269,7 @@ public class MainActivity extends Activity {
             
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) { 
-                    view.loadUrl("about:blank"); 
-                    showNoInternetPopUp(); 
-                }
+                if (request.isForMainFrame()) { view.loadUrl("about:blank"); showNoInternetPopUp(); }
             }
         });
     }
@@ -240,6 +277,22 @@ public class MainActivity extends Activity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        // ⚡ [HK-OPERATION] CAPTURE VOICE RESULT AND SEND TO HTML
+        if (requestCode == RC_VOICE && resultCode == RESULT_OK && data != null) {
+            java.util.ArrayList<String> result = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+            if (result != null && !result.isEmpty()) {
+                String spokenText = result.get(0).replace("'", "\\'"); 
+                String js = "javascript:(function() { " +
+                            "var searchBar = document.getElementById('hk-search-bar');" +
+                            "if(searchBar) {" +
+                            "    searchBar.value = '" + spokenText + "';" +
+                            "    searchBar.dispatchEvent(new Event('input', { bubbles: true }));" +
+                            "}" +
+                            "})()";
+                hkView.evaluateJavascript(js, null);
+            }
+        }
 
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
@@ -250,20 +303,22 @@ public class MainActivity extends Activity {
 
                 hkElitePrefs.edit().putString("SECURE_EMAIL", userEmail).putString("SECURE_TOKEN", idToken).apply();
 
-                // ⚡ GHOST MODE (No Toast)
+                Toast.makeText(this, "RIDDHI SIDDHI: Decrypting Alpha Token...", Toast.LENGTH_SHORT).show();
+
                 String js = "javascript:(function() { " +
                             "if(window.handleAndroidLogin) { window.handleAndroidLogin('" + idToken + "'); }" +
-                            "else { console.log('System Breach: Master Receiver Not Found'); }" +
+                            "else { alert('System Breach: Master Receiver Not Found'); }" +
                             "})()";
                 hkView.evaluateJavascript(js, null);
 
-                // FORCE AUTOMATIC REFRESH - SILENTLY (Using loadUrl TARGET_URL to prevent blank bugs)
+                // FORCE AUTOMATIC REFRESH
                 new Handler().postDelayed(() -> {
-                    hkView.loadUrl(TARGET_URL);
+                    Toast.makeText(MainActivity.this, "Tech Wizard System Refreshing...", Toast.LENGTH_SHORT).show();
+                    hkView.reload();
                 }, 2500);
 
             } catch (Exception e) {
-                // Silent Fail
+                Toast.makeText(this, "Auth Intercept Failed! Check SHA-1 Key.", Toast.LENGTH_LONG).show();
             }
         }
 
@@ -280,11 +335,8 @@ public class MainActivity extends Activity {
                 @Override
                 public void onAvailable(Network network) {
                     runOnUiThread(() -> {
-                        if (internetDialog != null && internetDialog.isShowing()) {
-                            internetDialog.dismiss();
-                        }
-                        // ⚡ MASTER FIX: System seedha TARGET_URL load karega, taaki black screen destroy ho jaye
-                        hkView.loadUrl(TARGET_URL);
+                        if (internetDialog != null) internetDialog.dismiss();
+                        hkView.reload();
                     });
                 }
             });
@@ -293,62 +345,31 @@ public class MainActivity extends Activity {
 
     private void showNoInternetPopUp() {
         if (internetDialog != null && internetDialog.isShowing()) return;
-        
         LinearLayout dLayout = new LinearLayout(this);
         dLayout.setOrientation(LinearLayout.VERTICAL);
-        // Deep dark military green/black theme for breach
-        dLayout.setBackgroundColor(Color.parseColor("#0A150A")); 
+        dLayout.setBackgroundColor(Color.parseColor("#002200")); 
         dLayout.setPadding(60, 80, 60, 80);
         dLayout.setGravity(Gravity.CENTER);
         
-        // Title text
         TextView title = new TextView(this);
-        title.setText("NETWORK BREACH ⚡");
-        title.setTextColor(Color.parseColor("#FFD700")); // Yellow Warning Lightning
+        title.setText("NETWORK BREACH");
+        title.setTextColor(Color.WHITE);
         title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        title.setTextSize(18f);
         
-        // ⚡ Naya comment: NO NETWORK DETECTED
-        TextView subTitle = new TextView(this);
-        subTitle.setText("NO NETWORK DETECTED");
-        subTitle.setTextColor(Color.WHITE);
-        subTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        subTitle.setPadding(0, 15, 0, 40);
-        subTitle.setGravity(Gravity.CENTER);
-        
-        // Button update: FORCE REFRESH
         TextView retryBtn = new TextView(this);
-        retryBtn.setText(" FORCE REFRESH ");
+        retryBtn.setText(" FORCE RECONNECT ");
         retryBtn.setPadding(40, 35, 40, 35);
-        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); // Aggressive Red
+        retryBtn.setBackgroundColor(Color.parseColor("#FF0000")); 
         retryBtn.setTextColor(Color.WHITE);
-        retryBtn.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         
-        retryBtn.setOnClickListener(v -> { 
-            if (internetDialog != null) internetDialog.dismiss();
-            // ⚡ MASTER FIX: Click hone pe direct Target URL load hoga
-            hkView.loadUrl(TARGET_URL); 
-        });
+        retryBtn.setOnClickListener(v -> { hkView.loadUrl(TARGET_URL); if (internetDialog != null) internetDialog.dismiss(); });
         
         dLayout.addView(title);
-        dLayout.addView(subTitle);
         dLayout.addView(retryBtn);
         
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        // Custom dark stroke/border
-        GradientDrawable border = new GradientDrawable();
-        border.setColor(Color.parseColor("#050505"));
-        border.setStroke(3, Color.parseColor("#333333"));
-        dLayout.setBackground(border);
-
         builder.setView(dLayout).setCancelable(false);
         internetDialog = builder.create();
-        
-        // Removing default alert dialog background to show custom dark layout perfectly
-        if(internetDialog.getWindow() != null) {
-            internetDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        }
-        
         internetDialog.show();
     }
 
@@ -356,4 +377,4 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (hkView.canGoBack()) hkView.goBack(); else super.onBackPressed();
     }
-    }
+}
