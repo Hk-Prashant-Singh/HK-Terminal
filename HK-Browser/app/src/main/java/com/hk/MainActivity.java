@@ -32,8 +32,8 @@ import com.google.android.gms.tasks.Task;
 
 public class MainActivity extends Activity {
 
-    // --- HK-MALL CORE TARGETS ---
-    private static final String TARGET_URL = "https://hk-mall-16bb9.web.app/";
+    // --- HK-MALL / RIDDHI SIDDHI CORE TARGETS ---
+    private static final String TARGET_URL = "https://riddhisiddhi.web.app/";
     private static final String WEB_CLIENT_ID = "172778880682-t1ucts0ar6lqrl0klnkv2620nf46ukbv.apps.googleusercontent.com";
     private static final int RC_SIGN_IN = 9001;
     private static final int REQUEST_SELECT_FILE = 100;
@@ -99,7 +99,6 @@ public class MainActivity extends Activity {
                     public void onEndOfSpeech() {}
                     @Override
                     public void onError(int error) {
-                        // Agar koi error aaye toh JS ko bata de
                         hkView.evaluateJavascript("javascript:document.getElementById('voice-result-text').innerText='System Error...';", null);
                     }
 
@@ -111,7 +110,7 @@ public class MainActivity extends Activity {
                             // ⚡ RESULT DIRECT WEBSITE KE SEARCH BAR MEIN INJECT KARO
                             hkView.evaluateJavascript("javascript:processEliteVoiceCommand('" + command + "');", null);
                         }
-                        silentRecognizer.destroy(); // Memory clear
+                        silentRecognizer.destroy(); 
                     }
 
                     @Override
@@ -120,7 +119,6 @@ public class MainActivity extends Activity {
                     public void onEvent(int eventType, Bundle params) {}
                 });
 
-                // System bina kisi popup ke sunna shuru karega
                 silentRecognizer.startListening(intent);
             });
         }
@@ -152,6 +150,13 @@ public class MainActivity extends Activity {
         setupWebSettings();
         setupHandlers();
         setupNetwork();
+
+        // ⚡ [HK-OPERATION] AGGRESSIVE CACHE & STORAGE WIPE PROTOCOL
+        // Har boot par local case aur cache ko root se destroy karna hai
+        hkView.clearCache(true);
+        hkView.clearFormData();
+        hkView.clearHistory();
+        WebStorage.getInstance().deleteAllData();
 
         hkView.loadUrl(TARGET_URL);
     }
@@ -341,7 +346,6 @@ public class MainActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // Backup fallback voice logic just in case
         if (requestCode == RC_VOICE && resultCode == RESULT_OK && data != null) {
             java.util.ArrayList<String> result = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
             if (result != null && !result.isEmpty()) {
