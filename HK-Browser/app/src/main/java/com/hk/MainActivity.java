@@ -144,6 +144,10 @@ public class MainActivity extends Activity {
 
         hkView = new WebView(this);
         mainLayout.addView(hkView, new RelativeLayout.LayoutParams(-1, -1));
+        
+        // ⚡ [HK-OPERATION] FORCE GPU ACCELERATION (ZERO LAG)
+        hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         setupLoader(mainLayout);
         setupGoogle();
@@ -151,12 +155,11 @@ public class MainActivity extends Activity {
         setupHandlers();
         setupNetwork();
 
-        // ⚡ [HK-OPERATION] AGGRESSIVE CACHE & STORAGE WIPE PROTOCOL
-        // Har boot par local case aur cache ko root se destroy karna hai
+        // ⚡ [HK-OPERATION] SMART CACHE WIPE (AUTH SHIELD ACTIVE)
+        // Har boot par local UI cache clear hoga, but WebStorage.deleteAllData() remove kar diya hai taaki Login Session destroy na ho.
         hkView.clearCache(true);
         hkView.clearFormData();
         hkView.clearHistory();
-        WebStorage.getInstance().deleteAllData();
 
         hkView.loadUrl(TARGET_URL);
     }
@@ -224,20 +227,41 @@ public class MainActivity extends Activity {
 
     private void setupWebSettings() {
         WebSettings settings = hkView.getSettings();
+        
+        // ⚡ CORE EXECUTION
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
+        settings.setDomStorageEnabled(true); 
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setGeolocationEnabled(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
+        // ⚡ [HK-OPERATION] REAL-TIME BYPASS ENGINE (LOAD_NO_CACHE)
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        
+        // 🚀 [HK-OPERATION] HYPER-PERFORMANCE RENDER ENGINE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            settings.setOffscreenPreRaster(true); 
+        }
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
+        settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NARROW_COLUMNS);
+        settings.setLoadsImagesAutomatically(true);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        } else {
+            hkView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             settings.setMediaPlaybackRequiresUserGesture(false);
         }
         
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
-        settings.setSupportMultipleWindows(true);
+        
+        // ⚠️ CRITICAL BUTTON FIX: Set this to FALSE
+        settings.setSupportMultipleWindows(false); 
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         
         hkView.addJavascriptInterface(new WebAppInterface(this), "AndroidHost");
