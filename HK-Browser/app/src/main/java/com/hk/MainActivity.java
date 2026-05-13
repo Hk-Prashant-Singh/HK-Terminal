@@ -145,9 +145,10 @@ public class MainActivity extends Activity {
         hkView = new WebView(this);
         mainLayout.addView(hkView, new RelativeLayout.LayoutParams(-1, -1));
         
-        // ⚡ [HK-OPERATION] FORCE GPU ACCELERATION (ZERO LAG)
+        // ⚡ [HK-OPERATION] FORCE GPU ACCELERATION & ZERO LAG OVERRIDE
         hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
+        hkView.setOverScrollMode(View.OVER_SCROLL_NEVER); // 🛡️ Hang-Fix: Stops layout bounce lock
 
         setupLoader(mainLayout);
         setupGoogle();
@@ -156,7 +157,6 @@ public class MainActivity extends Activity {
         setupNetwork();
 
         // ⚡ [HK-OPERATION] SMART CACHE WIPE (AUTH SHIELD ACTIVE)
-        // Har boot par local UI cache clear hoga, but WebStorage.deleteAllData() remove kar diya hai taaki Login Session destroy na ho.
         hkView.clearCache(true);
         hkView.clearFormData();
         hkView.clearHistory();
@@ -237,12 +237,13 @@ public class MainActivity extends Activity {
         settings.setGeolocationEnabled(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // ⚡ [HK-OPERATION] REAL-TIME BYPASS ENGINE (LOAD_NO_CACHE)
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        // ⚡ [HK-OPERATION] ANTI-HANG CACHE MODE
+        // LOAD_DEFAULT lagane se Lazy Load makkhan chalega aur scrolling par system freeze nahi hoga.
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         
-        // 🚀 [HK-OPERATION] HYPER-PERFORMANCE RENDER ENGINE
+        // 🚀 [HK-OPERATION] MEMORY STABILIZER (CRITICAL FIX)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            settings.setOffscreenPreRaster(true); 
+            settings.setOffscreenPreRaster(false); // 🛡️ False kiya hai taaki background memory leak ruk jaye
         }
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
         settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NARROW_COLUMNS);
@@ -260,7 +261,7 @@ public class MainActivity extends Activity {
         
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
         
-        // ⚠️ CRITICAL BUTTON FIX: Set this to FALSE
+        // ⚠️ CRITICAL BUTTON FIX
         settings.setSupportMultipleWindows(false); 
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         
