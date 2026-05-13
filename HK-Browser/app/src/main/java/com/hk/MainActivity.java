@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
     private static final int RC_SIGN_IN = 9001;
     private static final int REQUEST_SELECT_FILE = 100;
     
-    // ⚡ [HK-OPERATION] ELITE VOICE ENGINE ID
+    // тЪб [HK-OPERATION] ELITE VOICE ENGINE ID
     private static final int RC_VOICE = 9002; 
 
     private WebView hkView;
@@ -48,10 +48,10 @@ public class MainActivity extends Activity {
     private GoogleSignInClient mGoogleSignInClient;
     public ValueCallback<Uri[]> uploadMessage;
     
-    // 🛡️ HK NATIVE VAULT
+    // ЁЯЫбя╕П HK NATIVE VAULT
     private SharedPreferences hkElitePrefs;
 
-    // 🛡️ THE ALPHA BRIDGE: Direct WebView to Native Hijack
+    // ЁЯЫбя╕П THE ALPHA BRIDGE: Direct WebView to Native Hijack
     public class WebAppInterface {
         Context mContext;
         WebAppInterface(Context c) { mContext = c; }
@@ -76,7 +76,7 @@ public class MainActivity extends Activity {
             });
         }
 
-        // ⚡ [HK-OPERATION] NATIVE SILENT VOICE ENGINE (NO POPUP)
+        // тЪб [HK-OPERATION] NATIVE SILENT VOICE ENGINE (NO POPUP)
         @JavascriptInterface
         public void startSilentVoiceEngine() {
             ((Activity)mContext).runOnUiThread(() -> {
@@ -107,7 +107,7 @@ public class MainActivity extends Activity {
                         java.util.ArrayList<String> data = results.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
                         if (data != null && !data.isEmpty()) {
                             String command = data.get(0).replace("'", "\\'");
-                            // ⚡ RESULT DIRECT WEBSITE KE SEARCH BAR MEIN INJECT KARO
+                            // тЪб RESULT DIRECT WEBSITE KE SEARCH BAR MEIN INJECT KARO
                             hkView.evaluateJavascript("javascript:processEliteVoiceCommand('" + command + "');", null);
                         }
                         silentRecognizer.destroy(); 
@@ -128,7 +128,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // ⚡ [HK-OPERATION] RUNTIME MIC PERMISSION
+        // тЪб [HK-OPERATION] RUNTIME MIC PERMISSION
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 101);
@@ -144,11 +144,6 @@ public class MainActivity extends Activity {
 
         hkView = new WebView(this);
         mainLayout.addView(hkView, new RelativeLayout.LayoutParams(-1, -1));
-        
-        // ⚡ [HK-OPERATION] FORCE GPU ACCELERATION & ZERO LAG OVERRIDE
-        hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        hkView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
-        hkView.setOverScrollMode(View.OVER_SCROLL_NEVER); // 🛡️ Hang-Fix: Stops layout bounce lock
 
         setupLoader(mainLayout);
         setupGoogle();
@@ -156,10 +151,12 @@ public class MainActivity extends Activity {
         setupHandlers();
         setupNetwork();
 
-        // ⚡ [HK-OPERATION] SMART CACHE WIPE (AUTH SHIELD ACTIVE)
+        // тЪб [HK-OPERATION] AGGRESSIVE CACHE & STORAGE WIPE PROTOCOL
+        // Har boot par local case aur cache ko root se destroy karna hai
         hkView.clearCache(true);
         hkView.clearFormData();
         hkView.clearHistory();
+        WebStorage.getInstance().deleteAllData();
 
         hkView.loadUrl(TARGET_URL);
     }
@@ -227,42 +224,20 @@ public class MainActivity extends Activity {
 
     private void setupWebSettings() {
         WebSettings settings = hkView.getSettings();
-        
-        // ⚡ CORE EXECUTION
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); 
+        settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setGeolocationEnabled(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // ⚡ [HK-OPERATION] ANTI-HANG CACHE MODE
-        // LOAD_DEFAULT lagane se Lazy Load makkhan chalega aur scrolling par system freeze nahi hoga.
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        
-        // 🚀 [HK-OPERATION] MEMORY STABILIZER (CRITICAL FIX)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            settings.setOffscreenPreRaster(false); // 🛡️ False kiya hai taaki background memory leak ruk jaye
-        }
-        settings.setRenderPriority(WebSettings.RenderPriority.HIGH); 
-        settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NARROW_COLUMNS);
-        settings.setLoadsImagesAutomatically(true);
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            hkView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        } else {
-            hkView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             settings.setMediaPlaybackRequiresUserGesture(false);
         }
         
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
-        
-        // ⚠️ CRITICAL BUTTON FIX
-        settings.setSupportMultipleWindows(false); 
+        settings.setSupportMultipleWindows(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         
         hkView.addJavascriptInterface(new WebAppInterface(this), "AndroidHost");
@@ -441,7 +416,7 @@ public class MainActivity extends Activity {
         dLayout.setGravity(Gravity.CENTER);
         
         TextView title = new TextView(this);
-        title.setText("NETWORK BREACH ⚡");
+        title.setText("NETWORK BREACH тЪб");
         title.setTextColor(Color.parseColor("#FFD700")); 
         title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         title.setTextSize(18f);
